@@ -65,6 +65,9 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/auth") ||
     path.startsWith("/api/auth") ||
     path.startsWith("/api/jobs/drain") ||
+    // CRON_SECRET-gated, called server-to-server by a scheduler with no user
+    // session — same exemption rationale as /api/jobs/drain.
+    path.startsWith("/api/cron") ||
     path.startsWith("/design-drafts") ||
     path.startsWith("/_next") ||
     path.startsWith("/fonts") ||
