@@ -24,6 +24,12 @@ export function useGuestSession(): GuestSession {
         data: { session },
       } = await supabase.auth.getSession();
       if (!session) {
+        // This client-side call is NOT rate-limited by this app — anonymous
+        // auth.users creation is throttled only by Supabase-side controls
+        // (dashboard anonymous sign-in rate limits / CAPTCHA), which are the
+        // real defense against signup spam here. The 48h guest-cleanup scan
+        // is the backstop that reaps any orgs that slip through. See README
+        // (added in a later task) for how to configure those Supabase settings.
         const { error } = await supabase.auth.signInAnonymously();
         if (error) {
           console.error(error);
