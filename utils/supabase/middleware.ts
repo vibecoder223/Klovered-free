@@ -54,6 +54,14 @@ export async function updateSession(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic =
     path === "/" ||
+    // Public GTM tool: the 3-step shell pages must render for a first-time,
+    // not-yet-signed-in visitor. The shell then signs in anonymously (setting
+    // the sb-*-auth-token cookie) BEFORE any screen fetches an API, so the API
+    // routes below stay protected — they always carry the cookie by the time
+    // they are called (fetches are gated on the session being `ready`).
+    path === "/knowledge" ||
+    path === "/rfp" ||
+    path === "/answers" ||
     path.startsWith("/auth") ||
     path.startsWith("/api/auth") ||
     path.startsWith("/api/jobs/drain") ||

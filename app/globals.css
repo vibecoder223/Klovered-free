@@ -1235,6 +1235,79 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 }
 .deal-card:hover .deal-card-advance { background: var(--accent); color: #fff; border-color: var(--accent); }
 
+/* ──────────────── Public shell (klovered-free GTM tool)
+ * Linear 3-step flow, no sidebar. Topbar = wordmark · step nav · auth slot.
+ * All color from tokens; green spent only on the active/completed step. */
+
+.pub-topbar {
+  display: flex; align-items: center; gap: 20px;
+  padding: 0 28px; height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 20;
+}
+.pub-wordmark {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  color: var(--fg); font-size: 15px; font-weight: 650;
+  letter-spacing: -0.02em; text-decoration: none;
+  flex-shrink: 0;
+}
+.pub-free {
+  font-size: 11.5px; font-weight: 500; color: var(--fg-4);
+  letter-spacing: 0; position: relative; top: -0.5px;
+}
+.pub-nav-center { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.pub-authslot { flex-shrink: 0; display: flex; align-items: center; min-width: 0; }
+
+.pub-main { min-height: calc(100vh - 52px); }
+
+.pub-footer {
+  padding: 20px 28px 28px; text-align: center;
+  font-size: 11.5px; color: var(--fg-5);
+  line-height: 1.5;
+}
+
+/* Step indicator — numbered links, sentence case, Geist. State color only. */
+.stepnav { display: flex; align-items: center; gap: 6px; }
+.stepnav-item { display: inline-flex; align-items: center; gap: 6px; }
+.stepnav-rule {
+  width: 20px; height: 1px; background: var(--divider); flex-shrink: 0;
+}
+.stepnav-step {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 500; text-decoration: none;
+  color: var(--fg-4);
+  transition: background var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease);
+  white-space: nowrap;
+}
+.stepnav-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 17px; height: 17px; flex-shrink: 0;
+  font-size: 11.5px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-5);
+}
+.stepnav-step:hover { color: var(--fg-2); }
+.stepnav-step.is-active {
+  background: var(--accent-tint); color: var(--accent-3); font-weight: 600;
+}
+.stepnav-step.is-active .stepnav-num { color: var(--accent); }
+.stepnav-step.is-done { color: var(--fg-3); }
+.stepnav-step.is-done .stepnav-num { color: var(--accent); }
+.stepnav-step.is-done:hover { color: var(--fg); }
+
+/* Preparing-session skeleton — calm, no spinner */
+.pub-skel { display: flex; flex-direction: column; gap: 14px; }
+.pub-skel-line {
+  height: 12px; border-radius: 6px;
+  background: var(--bg-2);
+  animation: pubSkelPulse 1.6s ease-in-out infinite;
+}
+.pub-skel-note { font-size: 12.5px; color: var(--fg-4); }
+@keyframes pubSkelPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
 /* ──────────────── Reduced motion */
 
 @media (prefers-reduced-motion: reduce) {

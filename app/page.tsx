@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+
+// The public tool starts at step 1. The root path just forwards there.
 export default function Home() {
-  return <div className="p-7"><h1 className="page-title">Klovered Free</h1></div>;
+  redirect("/knowledge");
 }
