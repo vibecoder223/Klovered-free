@@ -1,0 +1,1245 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────
+ * Self-hosted Geist + Geist Mono (was Google Fonts CDN).
+ * Files live in public/fonts; latin subsets are preloaded in
+ * app/layout.tsx. font-display: swap keeps first paint unblocked.
+ * ──────────────────────────────────────────────────────────── */
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/Geist-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/Geist-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/Geist-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/Geist-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300 800;
+  font-display: swap;
+  src: url('/fonts/Geist-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-cyrillic-ext.woff2') format('woff2');
+  unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-symbols2.woff2') format('woff2');
+  unicode-range: U+2000-2001, U+2004-2008, U+200A, U+23B8-23BD, U+2500-259F;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-vietnamese.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url('/fonts/GeistMono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+
+/* ──────────────────────────────────────────────────────────────
+ * Klovered — design tokens · BRAND.md "Green" (locked direction)
+ * Near-white canvas, one confident green brand color carrying every
+ * action/identity moment. No second accent color. Geist sans everywhere
+ * (numbers included); Geist Mono only in .kbd chips. OKLCH throughout.
+ * Token values here must match BRAND.md section 5 — that file is the
+ * spec, this is the implementation.
+ * ──────────────────────────────────────────────────────────── */
+
+:root {
+  /* Canvas + panel: near-white bg (matches the approved dashboard mockup —
+   * clean SaaS white, not a visible warm/gray tint), green-tinted second
+   * layer (hue 152) for --bg-2 (sidebar hover, table heads). */
+  --bg:        oklch(0.995 0.001 152);
+  --bg-2:      oklch(0.968 0.004 152);
+  --surface:   oklch(1     0     0  );
+  --elevated:  oklch(1     0     0  );
+
+  /* Hairline borders */
+  --border:        oklch(0.90  0.005 152);
+  --border-strong: oklch(0.80  0.007 152);
+  --divider:       oklch(0.945 0.004 152);
+
+  /* Ink ramp */
+  --fg:   oklch(0.20 0.015 152);
+  --fg-2: oklch(0.38 0.012 152);
+  --fg-3: oklch(0.52 0.010 152);
+  --fg-4: oklch(0.64 0.008 152);
+  --fg-5: oklch(0.76 0.006 152);
+
+  /* Accent — brand green (BRAND.md §5). The only accent color in the
+     system. State and action only, never chrome. */
+  --accent:        oklch(0.53 0.18 152);
+  --accent-2:      oklch(0.47 0.17 152);
+  --accent-3:      oklch(0.44 0.16 152);
+  --accent-tint:   oklch(0.955 0.045 152);
+  --accent-tint2:  oklch(0.92  0.06  152);
+  --accent-soft:   oklch(0.88  0.09  152);
+  --accent-line:   oklch(0.78  0.12  152);
+  --accent-glow:   oklch(0.53 0.18 152 / 0.16);
+
+  /* Status — always paired with a label, never color alone. "ok" reuses
+     the SAME vivid brand green as primary buttons/active state (--accent),
+     not the darker --accent-3 — that muted shade read as an off-brand
+     "forest green" wherever it appeared as a standalone dot/indicator,
+     inconsistent with the brighter green used everywhere else. One shade
+     of green, everywhere "ok" appears. */
+  --ok:        var(--accent);
+  --ok-tint:   var(--accent-tint);
+  --warn:      oklch(0.62 0.14 62);
+  --warn-tint: oklch(0.97 0.035 70);
+  --err:       oklch(0.55 0.19 27);
+  --err-tint:  oklch(0.96 0.035 27);
+
+  /* Type scale — tight; hierarchy via weight + mono/sans contrast */
+  --text-2xs: 9px;
+  --text-xs:  10.5px;
+  --text-sm:  12px;
+  --text-base:13px;
+  --text-md:  14px;
+  --text-lg:  16px;
+  --text-xl:  20px;
+  --text-2xl: 26px;
+
+  /* Radius — 5px controls, 8px blocks */
+  --r-sm: 4px;
+  --r:    5px;
+  --r-md: 8px;
+  --r-lg: 10px;
+
+  /* Motion */
+  --ease:        cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-quint:  cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-fast:    100ms;
+  --dur:         150ms;
+  --dur-slow:    240ms;
+
+  /* Elevation — components use their own 1px border. Shadows add lift only,
+   * never an outline ring (would double up on already-bordered elements). */
+  --shadow-1:  none;
+  --shadow-2:  0 2px 8px oklch(0.15 0.012 90 / 0.05);
+  --shadow-3:  0 8px 24px oklch(0.15 0.012 90 / 0.10);
+  --shadow-accent: 0 1px 0 oklch(1 0 0 / 0.18) inset,
+                   0 2px 6px var(--accent-glow);
+
+  /* Shell */
+  --sidebar: 216px;
+  --topbar:  44px;
+
+  /* Sidebar surface — matches the page canvas exactly (was a darker gray
+   * panel before) so nav blends into the app instead of reading as a
+   * separate box. Hairline border still marks the edge. */
+  --sidebar-bg:     var(--bg);
+  --sidebar-line:   var(--border);
+  --sidebar-active: var(--surface);
+}
+
+/* ──────────────── Base */
+
+html, body {
+  margin: 0; padding: 0; min-height: 100%;
+  background: var(--bg);
+  color: var(--fg-2);
+  /* Body + UI: Geist. Dense by design (13px / 1.45). */
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'ss01', 'ss03';
+}
+
+::selection { background: var(--accent-soft); color: var(--accent-3); }
+
+.num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.mono { font-family: 'Geist Mono', ui-monospace, monospace; }
+
+/* ──────────────── Premium-execution utilities (additive)
+ * .kbd        — keyboard shortcut chip (⌘K, /, U)
+ * .status     — status indicator with leading dot
+ * .meta-mono  — inline monospace metadata (file size, dates)
+ * ──────────────────────────────────────────────────────── */
+
+.kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 10.5px;
+  color: var(--fg-5);
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--divider);
+  line-height: 1.4;
+}
+
+.status {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--text-xs);
+  color: var(--fg-3);
+}
+.status::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--fg-5);
+}
+.status.ok::before     { background: var(--ok);     box-shadow: 0 0 0 2px color-mix(in oklch, var(--ok) 22%, transparent); }
+.status.warn::before   { background: var(--warn);   box-shadow: 0 0 0 2px color-mix(in oklch, var(--warn) 22%, transparent); }
+.status.err::before    { background: var(--err);    box-shadow: 0 0 0 2px color-mix(in oklch, var(--err) 22%, transparent); }
+.status.pending::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+  animation: statusPulse 1.6s infinite ease-in-out;
+}
+@keyframes statusPulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 2px var(--accent-glow); }
+  50%     { opacity: 0.55; box-shadow: 0 0 0 4px var(--accent-glow); }
+}
+
+.meta-mono {
+  font-family: 'Geist', sans-serif;
+  font-size: 11.5px;
+  color: var(--fg-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────── Headings — Geist, tight scale. No display family:
+ * hierarchy comes from weight and mono/sans contrast, not size jumps. */
+
+h1, h2, h3 {
+  font-family: 'Geist', system-ui, sans-serif;
+  color: var(--fg);
+}
+h1 { font-size: 20px; line-height: 1.2;  font-weight: 650; letter-spacing: -0.02em; }
+h2 { font-size: 15px; line-height: 1.3;  font-weight: 600; letter-spacing: -0.012em; }
+h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.008em; }
+
+/* Large readings (band numbers, key figures) — Geist sans, tabular */
+.display {
+  font-family: 'Geist', sans-serif;
+  font-weight: 550;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────── Page-level layout primitives (used across all pages)
+ *
+ *   <div class="page-header">
+ *     <div class="page-title-row">
+ *       <h1 class="page-title">…</h1>
+ *       <span class="page-meta">142 docs · 3,487 pages</span>
+ *     </div>
+ *     <p class="page-sub">…</p>
+ *   </div>
+ *
+ *   <div class="inline-stats">
+ *     <div class="inline-stat">
+ *       <div class="inline-stat-row">
+ *         <span class="stat-val">$4.8M</span>
+ *         <span class="stat-delta">+38%</span>
+ *       </div>
+ *       <span class="stat-label">won this quarter</span>
+ *     </div>
+ *   </div>
+ * ──────────────────────────────────────────────────────── */
+
+/* Page shell — the one page container. 1280px, fixed gutters, vertical rhythm.
+ * Every page wraps its body in <Page>. Tightens gutters on mobile. */
+.page-shell {
+  max-width: 1280px;
+  padding: 24px 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+@media (max-width: 768px) { .page-shell { padding: 16px 16px 32px; } }
+
+.page-header {
+  margin-bottom: 0;
+}
+.section-card-sub { font-size: 12px; color: var(--fg-4); margin-top: 2px; }
+
+/* Empty / zero state — one canonical centered treatment */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 40px 24px; color: var(--fg-4);
+}
+.empty-state .es-title { font-size: 14px; font-weight: 600; color: var(--fg-2); }
+.empty-state .es-hint { font-size: 12.5px; color: var(--fg-4); max-width: 44ch; }
+.page-title-row {
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.page-title {
+  font-family: 'Geist', sans-serif;
+  font-size: 20px; font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--fg);
+  margin: 0;
+}
+.page-meta {
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px;
+  color: var(--fg-4);
+  font-variant-numeric: tabular-nums;
+}
+.page-sub {
+  font-size: 13.5px;
+  color: var(--fg-4);
+  margin: 6px 0 0;
+  max-width: 64ch;
+  line-height: 1.55;
+}
+
+/* Inline stats — replaces hero-metric card-bingo. Dense data row. */
+.inline-stats {
+  display: flex; gap: 26px; align-items: baseline; flex-wrap: wrap;
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--divider);
+  margin-bottom: 18px;
+}
+.inline-stat { display: flex; flex-direction: column; gap: 2px; }
+.inline-stat-row { display: flex; align-items: baseline; gap: 7px; }
+.stat-val {
+  font-family: 'Geist', sans-serif;
+  font-size: 24px; font-weight: 550;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+}
+.stat-label {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-4);
+}
+.stat-delta {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.stat-delta.muted { color: var(--fg-4); }
+.stat-delta.warn  { color: var(--warn); }
+.stat-delta.err   { color: var(--err); }
+
+/* Filter chip — toolbar control */
+.filter-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font: inherit; font-size: 12px; font-weight: 500;
+  color: var(--fg-3);
+  cursor: pointer;
+  transition: all 100ms var(--ease);
+  white-space: nowrap;
+}
+.filter-chip:hover { background: var(--bg-2); border-color: var(--border-strong); color: var(--fg); }
+.filter-chip.active {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent-3);
+}
+.filter-chip svg { color: var(--fg-5); flex-shrink: 0; }
+.filter-chip.active svg { color: var(--accent); }
+
+/* Toolbar — wraps filter chips, search, view toggle */
+.toolbar {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+/* Section card — bordered white container for tables / grouped content.
+ * Lifts off the near-white canvas with a soft shadow (Clean SaaS elevation). */
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-2);
+}
+.section-card-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--divider);
+  background: var(--surface);
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+}
+/* Second head inside a merged card (e.g. output panel + activity stacked) —
+ * divides with a top rule instead of the card's own top border. */
+.section-card-head-divide { border-top: 1px solid var(--border); }
+.section-card-title {
+  font-family: 'Geist', sans-serif;
+  font-size: 13.5px; font-weight: 600;
+  color: var(--fg);
+  letter-spacing: -0.008em;
+}
+.section-card-count {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px;
+  color: var(--fg-4);
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Data table — sentence-case column headers, hairline dividers, roomy rows */
+.data-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px;
+}
+.data-table thead th {
+  text-align: left; font-weight: 500;
+  padding: 10px 16px;
+  color: var(--fg-4);
+  font-family: 'Geist', sans-serif;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.data-table tbody tr {
+  border-bottom: 1px solid var(--divider);
+  transition: background 80ms var(--ease);
+}
+.data-table tbody tr:hover { background: var(--bg-2); }
+.data-table tbody tr:last-child { border-bottom: none; }
+.data-table tbody td {
+  padding: 10px 16px;
+  color: var(--fg-2);
+  vertical-align: middle;
+}
+
+/* Search input — toolbar pill */
+.search-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 10px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-width: 220px;
+  flex: 1;
+  max-width: 320px;
+  transition: border-color 100ms var(--ease);
+}
+.search-pill:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.search-pill svg { color: var(--fg-5); flex-shrink: 0; }
+.search-pill input {
+  flex: 1; min-width: 0;
+  border: none; background: transparent;
+  font: inherit; font-size: 12.5px; color: var(--fg);
+  outline: none;
+}
+.search-pill input::placeholder { color: var(--fg-5); }
+
+/* Crumbs — breadcrumb trail used in topbar */
+.crumbs {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; color: var(--fg-4);
+}
+.crumbs .sep { color: var(--fg-5); }
+.crumbs .curr { color: var(--fg); font-weight: 500; }
+
+/* ──────────────── Focus — accessible, brand-tinted */
+
+*:focus { outline: none; }
+*:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.input:focus-visible,
+.textarea:focus-visible,
+.select:focus-visible {
+  outline: none;
+}
+
+/* ──────────────── Buttons */
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 5px 11px;
+  height: 28px;
+  border-radius: var(--r);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  font-family: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease),
+              color var(--dur-fast) var(--ease);
+  user-select: none;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--bg-2); border-color: var(--border-strong); color: var(--fg); }
+.btn:active { background: var(--bg); }
+
+/* Primary = brand green fill + white text (BRAND.md §7). */
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+.btn-primary:hover {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #fff;
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: transparent;
+}
+.btn-ghost:hover { background: var(--bg-2); border-color: transparent; }
+
+.btn-danger {
+  color: var(--err);
+  border-color: var(--border);
+  background: var(--surface);
+}
+.btn-danger:hover {
+  background: var(--err-tint);
+  border-color: var(--err-tint);
+}
+
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+/* ──────────────── Inputs */
+
+.input, .textarea, .select {
+  width: 100%;
+  border: 1px solid var(--border);
+  background-color: var(--bg-2);
+  border-radius: var(--r);
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+  color: var(--fg);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease),
+              box-shadow var(--dur-fast) var(--ease),
+              background-color var(--dur-fast) var(--ease);
+  font-family: inherit;
+}
+.input::placeholder, .textarea::placeholder { color: var(--fg-5); }
+.input:focus, .textarea:focus, .select:focus {
+  border-color: var(--accent);
+  background-color: var(--bg);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.textarea { min-height: 96px; resize: vertical; line-height: 1.55; }
+
+/* Custom select — strip native OS chrome, draw a Vellum chevron. */
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 30px;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239b9a94' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 13px;
+}
+.select::-ms-expand { display: none; }
+.select:hover { border-color: var(--border-strong); }
+.select:focus {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23347a52' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+.select option { color: var(--fg); background: var(--surface); }
+
+/* ──────────────── Custom popover select (components/Select.tsx) */
+.vselect { position: relative; display: inline-block; }
+.vselect-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  min-height: 32px;
+  line-height: 1;
+  /* The component draws its own chevron, so suppress the .select bg chevron and
+     its reserved right padding. */
+  background-image: none !important;
+  padding-right: 9px;
+}
+.vselect-trigger:disabled { opacity: 0.55; cursor: not-allowed; }
+.vselect-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vselect-chevron { flex-shrink: 0; color: var(--fg-4); transition: color var(--dur-fast) var(--ease); }
+.vselect-trigger[aria-expanded="true"] .vselect-chevron { color: var(--accent); }
+.vselect-menu {
+  position: absolute;
+  z-index: 50;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-3);
+  animation: vselect-in 90ms var(--ease);
+}
+@keyframes vselect-in {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.vselect-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--text-sm);
+  color: var(--fg-2);
+  cursor: pointer;
+  user-select: none;
+}
+.vselect-option.active { background: var(--bg-2); color: var(--fg); }
+.vselect-option.selected { color: var(--accent); font-weight: 500; }
+.vselect-option.selected.active { background: var(--accent-tint); }
+.vselect-option svg { flex-shrink: 0; }
+
+/* ──────────────── Segmented tabs */
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--fg-3);
+  border-radius: var(--r-sm);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.seg-btn:hover { color: var(--fg); }
+.seg-btn.active {
+  background: var(--accent-tint);
+  color: var(--accent-3);
+  font-weight: 600;
+}
+.seg-count {
+  font-family: 'Geist', sans-serif;
+  font-size: 11px;
+  color: var(--fg-4);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+}
+.seg-btn.active .seg-count { color: var(--accent-3); background: var(--accent-tint2); }
+
+.label {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--fg-3);
+  margin-bottom: 4px;
+  display: block;
+  letter-spacing: 0.005em;
+}
+
+/* ──────────────── Cards */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+/* When something needs to feel lifted off a card (popover, dropdown, dialog) */
+.elevated {
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-3);
+}
+
+/* ──────────────── Badges */
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  min-height: 20px;
+  white-space: nowrap;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  background: var(--bg-2);
+  color: var(--fg-3);
+  border: 1px solid transparent;
+  letter-spacing: 0.005em;
+}
+.badge-ok     { background: var(--ok-tint);     color: var(--ok); }
+.badge-warn   { background: var(--warn-tint);   color: var(--warn); }
+.badge-err    { background: var(--err-tint);    color: var(--err); }
+.badge-accent { background: var(--accent-tint); color: var(--accent-2); }
+
+/* ──────────────── Status tag (dot + sentence label) — the app-wide status
+ * vocabulary. Matches the dashboard stage dots. Used by StatusBadge so
+ * deals, questions, review, and processing statuses all read the same. */
+.st {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 500; color: var(--fg-3);
+  white-space: nowrap;
+}
+.st::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--fg-4); flex-shrink: 0;
+}
+.st-accent { color: var(--accent-3); } .st-accent::before { background: var(--accent); }
+.st-ok     { color: var(--ok); }        .st-ok::before     { background: var(--ok); }
+.st-warn   { color: var(--warn); }       .st-warn::before   { background: var(--warn); }
+.st-err    { color: var(--err); }        .st-err::before    { background: var(--err); }
+/* Live/in-progress states pulse to signal work underway */
+.st-live::before { animation: statusPulse 1.6s infinite ease-in-out; }
+
+/* ──────────────── Page entrance — subtle settle on route change */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+.page-in {
+  animation: fadeUp var(--dur-slow) var(--ease) both;
+}
+
+/* ──────────────── Scrollbar — refined for product chrome */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--bg);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--fg-5); }
+
+/* ──────────────── Questions split panel — responsive */
+
+.q-split {
+  display: flex;
+  overflow: hidden;
+}
+
+.q-list {
+  width: 280px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--divider);
+  background: var(--bg);
+  transition: width var(--dur) var(--ease);
+}
+
+@media (max-width: 900px) {
+  .q-list { border-right: none; }
+}
+
+.q-detail {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+/* Slightly narrower list at medium widths */
+@media (max-width: 1100px) {
+  .q-list { width: 250px; }
+}
+
+/* Single-panel mode: list or detail, never both at once */
+@media (max-width: 900px) {
+  .q-list { width: 100%; border-right: none; }
+  .q-list.q-panel-hidden { display: none; }
+  .q-detail.q-panel-hidden { display: none; }
+}
+
+/* Tighter page padding at medium widths */
+@media (max-width: 1000px) {
+  .q-page { padding: 16px !important; }
+}
+
+/* Show back button on narrow screens */
+@media (max-width: 900px) {
+  .q-back-btn { display: flex !important; }
+}
+
+/* ──────────────── App shell — responsive layout */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: var(--sidebar);
+  min-width: 0;
+  position: relative;
+}
+
+/* Quick find pill — full label on desktop, icon-only on mobile so it never
+   wraps inside the fixed-height topbar. */
+.quick-find { padding: 4px 8px 4px 10px; }
+@media (max-width: 640px) {
+  .quick-find { padding: 0; width: 30px; height: 30px; justify-content: center; }
+  .quick-find-label,
+  .quick-find-kbd { display: none; }
+}
+
+/* Mobile menu trigger — hidden on desktop */
+.mobile-menu-btn {
+  display: none;
+  position: fixed;
+  /* Vertically centered within the 44px topbar: (44 - 30) / 2 = 7px. */
+  top: 7px;
+  left: 12px;
+  z-index: 40;
+  width: 30px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  box-shadow: var(--shadow-1);
+  color: var(--fg-3);
+}
+.mobile-menu-btn:hover { background: var(--bg-2); }
+
+@media (max-width: 768px) {
+  .app-main {
+    margin-left: 0;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+  }
+
+  /* Make room for the fixed hamburger so the breadcrumbs don't sit under it.
+     Overrides the Topbar header's inline left padding on mobile only. */
+  .app-main > header {
+    padding-left: 52px !important;
+  }
+
+  /* Sidebar: hidden off-screen by default */
+  .sidebar-rail {
+    transform: translateX(-100%);
+    transition: transform var(--dur) var(--ease);
+    box-shadow: none;
+  }
+
+  /* Sidebar: visible when open */
+  .sidebar-rail.sidebar-open {
+    transform: translateX(0);
+    box-shadow: var(--shadow-3);
+  }
+
+  /* Backdrop: visible on mobile when sidebar open */
+  .sidebar-backdrop {
+    display: block !important;
+  }
+
+  /* Topbar: add left padding for hamburger space */
+  header.sticky {
+    padding-left: 52px !important;
+  }
+
+  /* Page padding: tighter on mobile */
+  .p-7 { padding: 16px !important; }
+  .px-7 { padding-left: 16px !important; padding-right: 16px !important; }
+
+  /* Analytics KPI grid: 2 cols on mobile */
+  .kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Analytics 2-col layout: stack */
+  .analytics-2col { grid-template-columns: 1fr !important; }
+}
+
+@media (max-width: 480px) {
+  /* Very small: single KPI column */
+  .kpi-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ──────────────── Instrument dashboard (draft B) ─────────────────
+ * Readings band, action queue, deal meter, activity feed, telemetry.
+ * ──────────────────────────────────────────────────────────────── */
+
+/* Full-width readings band under the topbar. The border/background span the
+ * full content width (instrument-panel look); .band-inner constrains the
+ * cell grid to the same max-width as the page content below it and stays
+ * flush left (the page content isn't centered either — it's anchored next
+ * to the sidebar), so the two edges line up instead of the band overhanging
+ * on wide screens. */
+.band {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  margin-bottom: 24px;
+}
+.band-inner {
+  display: grid;
+  grid-template-columns: repeat(var(--band-cols, 5), 1fr);
+  max-width: var(--band-max-width, 1300px);
+}
+.band-cell { padding: 16px 20px 15px 0; margin-left: 20px; border-right: 1px solid var(--divider); }
+.band-cell:first-child { margin-left: 28px; }
+.band-cell:last-child { border-right: none; padding-right: 28px; }
+
+/* Tablet: 5 columns get cramped once cells drop under ~150px — wrap to a
+ * 3-up grid so labels and deltas stay readable instead of squeezing. */
+@media (max-width: 900px) {
+  .band-inner { grid-template-columns: repeat(3, 1fr); }
+  .band-cell { border-right: 1px solid var(--divider); }
+  .band-cell:nth-child(3n) { border-right: none; }
+}
+/* Mobile: matches the app's 768px sidebar/page-padding breakpoint. */
+@media (max-width: 768px) {
+  .band-inner { grid-template-columns: repeat(2, 1fr); }
+  .band-cell { margin-left: 16px; padding-right: 0; }
+  .band-cell:first-child { margin-left: 16px; }
+  .band-cell:nth-child(3n) { border-right: 1px solid var(--divider); }
+  .band-cell:nth-child(2n) { border-right: none; padding-right: 16px; }
+}
+@media (max-width: 420px) {
+  .band-inner { grid-template-columns: 1fr; }
+  .band-cell { border-right: none !important; padding-right: 16px !important; }
+}
+.band-label {
+  display: block;
+  font-family: 'Geist', sans-serif;
+  font-size: 12.5px; font-weight: 500; color: var(--fg-4); margin-bottom: 6px;
+}
+.band-reading { display: flex; align-items: baseline; gap: 8px; }
+.band-n {
+  font-family: 'Geist', sans-serif;
+  font-size: 27px; font-weight: 550; color: var(--fg);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; line-height: 1;
+}
+.band-n.warn { color: var(--warn); }
+.band-n.err  { color: var(--err); }
+.band-n.ok   { color: var(--ok); }
+.band-delta {
+  font-family: 'Geist', sans-serif;
+  font-size: 11.5px; color: var(--fg-4);
+}
+.band-delta.up { color: var(--accent); }
+
+/* Action queue rows */
+.queue { list-style: none; margin: 0; padding: 0; }
+.queue-row {
+  display: grid; grid-template-columns: 14px 1fr auto auto;
+  align-items: center; gap: 12px;
+  padding: 11px 16px; border-bottom: 1px solid var(--divider);
+  transition: background var(--dur-fast) var(--ease);
+}
+/* Rows with no leading signal dot (e.g. My queue) — status is carried by
+   the colored mono ref label instead, so a redundant dot isn't needed. */
+.queue-row.no-sig { grid-template-columns: 1fr auto auto; }
+.queue-row:last-child { border-bottom: none; }
+.queue-row:hover { background: var(--bg); }
+.queue-sig { width: 7px; height: 7px; border-radius: 2px; justify-self: center; background: var(--fg-4); }
+.queue-sig.warn { background: var(--warn); }
+.queue-sig.err  { background: var(--err); }
+.queue-sig.accent { background: var(--accent); }
+.queue-sig.ok   { background: var(--ok); }
+.queue-say { font-size: 12.5px; font-weight: 500; color: var(--fg-2); }
+.queue-say small { display: block; font-weight: 400; font-size: 11.5px; color: var(--fg-4); margin-top: 1px; }
+.queue-ref {
+  font-family: 'Geist', sans-serif;
+  font-size: 11.5px; color: var(--fg-4); white-space: nowrap;
+}
+.queue-ref.warn   { color: var(--warn); }
+.queue-ref.err    { color: var(--err); }
+.queue-ref.accent { color: var(--accent-3); }
+.queue-ref.ok     { color: var(--ok); }
+.queue-act {
+  font-size: 11px; font-weight: 500; color: var(--accent-3);
+  border: 1px solid var(--border); border-radius: 4px; padding: 3px 8px;
+  white-space: nowrap;
+  transition: border-color var(--dur-fast) var(--ease);
+}
+.queue-row:hover .queue-act { border-color: var(--accent); }
+
+/* Primary queue action — the single most urgent row gets a solid brand-green
+   button instead of the default outline chip, so the eye lands on one CTA. */
+.queue-act-primary {
+  font-size: 11px; font-weight: 600; color: #fff;
+  background: var(--accent); border: 1px solid var(--accent);
+  border-radius: 4px; padding: 3px 8px; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.queue-row:hover .queue-act-primary { background: var(--accent-2); border-color: var(--accent-2); color: #fff; }
+
+/* Deal stage indicator (dot + sentence label) */
+.stage {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--fg-3);
+}
+.stage::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--fg-4); }
+.stage.draft  { color: var(--accent-3); } .stage.draft::before  { background: var(--accent); }
+.stage.review,
+.stage.warn   { color: var(--warn); }     .stage.review::before,
+                                           .stage.warn::before   { background: var(--warn); }
+.stage.done,
+.stage.ok     { color: var(--ok); }        .stage.done::before,
+                                            .stage.ok::before    { background: var(--ok); }
+.stage.err    { color: var(--err); }       .stage.err::before   { background: var(--err); }
+
+/* Completion meter */
+.meter { display: flex; align-items: center; gap: 8px; }
+.meter-track { width: 72px; height: 6px; background: var(--divider); border-radius: 3px; overflow: hidden; }
+.meter-fill { height: 100%; background: var(--accent); }
+.meter-fill.full { background: var(--ok); }
+.meter-pct {
+  font-family: 'Geist', sans-serif;
+  font-size: 12px; color: var(--fg-3); font-variant-numeric: tabular-nums;
+}
+
+/* Activity feed — actor avatar + description + relative time */
+.feed { list-style: none; margin: 0; padding: 0; }
+.feed-row {
+  display: flex; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--divider);
+}
+.feed-row:last-child { border-bottom: none; }
+.feed-avatar {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  background: var(--accent-tint); color: var(--accent-3);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Geist', sans-serif; font-weight: 600; font-size: 10px;
+}
+.feed-body { flex: 1; min-width: 0; }
+.feed-what { font-size: 12.5px; color: var(--fg-2); line-height: 1.45; }
+.feed-what b { color: var(--fg); font-weight: 600; }
+.feed-time { font-size: 11px; color: var(--fg-4); margin-top: 2px; }
+
+/* Quiet block-head link */
+.block-more { font-size: 11.5px; font-weight: 500; color: var(--accent-3); }
+.block-more:hover { color: var(--accent); }
+
+/* ──────────────── Dashboard readings strip — big, scannable numbers.
+ * State colour only on the ones that carry risk (warn/err) so the eye
+ * catches them; everything else stays ink. Sans, not mono — these are
+ * headline figures, not data-table digits. */
+.readings {
+  display: grid; grid-template-columns: repeat(var(--cols, 4), 1fr);
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden; box-shadow: var(--shadow-2);
+}
+.reading { padding: 16px 20px; border-right: 1px solid var(--divider); }
+.reading:last-child { border-right: none; }
+.reading .n {
+  font-family: 'Geist', sans-serif; font-size: 27px; font-weight: 550;
+  color: var(--fg); letter-spacing: -0.02em; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.reading .n.warn { color: var(--warn); }
+.reading .n.err  { color: var(--err); }
+.reading .n.ok   { color: var(--accent-3); }
+.reading .l { font-size: 12.5px; color: var(--fg-3); margin-top: 8px; }
+@media (max-width: 720px) {
+  .readings { grid-template-columns: repeat(2, 1fr); }
+  .reading:nth-child(2n) { border-right: none; }
+  .reading:nth-child(1), .reading:nth-child(2) { border-bottom: 1px solid var(--divider); }
+}
+
+/* Deals-by-deadline runway row — name/client, a time-buffer bar (short + red
+ * = little runway left), days-left + date. Replaces the plain data-table. */
+.rw-row {
+  display: grid; grid-template-columns: 1fr 200px 90px; align-items: center; gap: 16px;
+  padding: 11px 16px; border-bottom: 1px solid var(--divider);
+}
+.rw-row:last-child { border-bottom: none; }
+.rw-name { font-size: 13px; font-weight: 600; color: var(--fg); }
+.rw-client { font-weight: 400; color: var(--fg-4); font-size: 11px; margin-top: 1px; text-transform: none; }
+.rw-bar { height: 6px; border-radius: 99px; background: var(--divider); position: relative; overflow: hidden; }
+.rw-bar .fill { position: absolute; inset: 0 auto 0 0; border-radius: 99px; background: var(--fg-4); }
+.rw-bar .fill.warn { background: var(--warn); }
+.rw-bar .fill.err  { background: var(--err); }
+.rw-when { text-align: right; }
+.rw-days {
+  font-family: 'Geist', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--fg-2);
+  font-variant-numeric: tabular-nums;
+}
+.rw-days.warn { color: var(--warn); }
+.rw-days.err  { color: var(--err); }
+.rw-date { font-size: 11px; color: var(--fg-4); margin-top: 1px; font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .rw-row { grid-template-columns: 1fr auto; }
+  .rw-bar { display: none; }
+}
+
+/* Trust panel rows ("This week's output") — key/value, sans figures */
+.trust-row {
+  display: flex; align-items: baseline; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--divider);
+}
+.trust-row:last-child { border-bottom: none; }
+.trust-k { font-size: 12.5px; color: var(--fg-3); }
+.trust-v {
+  font-family: 'Geist', sans-serif; font-size: 16px; font-weight: 600; color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────── Deals board — pipeline kanban, Klovered-specific.
+ * Columns sit on the plain canvas (no filled/tinted box per column — that
+ * read as heavy and did no communicative work). A stage dot on the header
+ * ties into the app's one status vocabulary (.stage/.st). Cards carry only
+ * ONE risk signal (the due-date text), not a redundant color bar. Empty
+ * fields (no client, no due date) are omitted rather than printed as filler.
+ * The quick-advance arrow is the one deliberately-Klovered touch: move a
+ * deal to its next stage without a drag, useful when triaging many deals. */
+.deal-board { display: flex; gap: 0; overflow-x: auto; padding-bottom: 12px; align-items: flex-start; }
+.deal-col {
+  min-width: 268px; width: 268px; flex-shrink: 0;
+  padding: 0 14px; display: flex; flex-direction: column; gap: 10px;
+  border-right: 1px solid var(--divider);
+}
+.deal-col:first-child { padding-left: 0; }
+.deal-col:last-child { border-right: none; }
+.deal-col-head { display: flex; align-items: baseline; gap: 7px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.deal-col-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--fg-4); margin-bottom: 1px; }
+.deal-col-dot.accent { background: var(--accent); }
+.deal-col-dot.warn   { background: var(--warn); }
+.deal-col-dot.ok     { background: var(--ok); }
+.deal-col-dot.err    { background: var(--err); }
+.deal-col-title { font-size: 13px; font-weight: 600; color: var(--fg); }
+.deal-col-count { font-size: 12px; color: var(--fg-4); font-variant-numeric: tabular-nums; }
+.deal-col-sub { margin-left: auto; font-size: 11.5px; color: var(--fg-4); font-variant-numeric: tabular-nums; }
+.deal-col-list {
+  display: flex; flex-direction: column; gap: 8px; min-height: 64px;
+  border-radius: 8px; transition: box-shadow var(--dur-fast) var(--ease);
+}
+.deal-col-list.over { box-shadow: inset 0 0 0 1.5px var(--accent-line); background: var(--accent-tint); }
+.deal-col-empty { font-size: 12px; text-align: center; padding: 20px 8px; color: var(--fg-5); }
+
+.deal-card {
+  display: block; position: relative;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+  padding: 11px 12px 10px; box-shadow: var(--shadow-2);
+  user-select: none;
+  transition: box-shadow var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.deal-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow-3); }
+.deal-card-title { font-size: 13px; font-weight: 600; color: var(--fg); line-height: 1.3; flex: 1; min-width: 0; }
+.deal-card-client { font-size: 11.5px; color: var(--fg-4); margin-top: 2px; }
+.deal-card-meter { display: flex; align-items: center; gap: 7px; margin-top: 9px; }
+.deal-card-meter .t { flex: 1; height: 6px; border-radius: 99px; background: var(--divider); overflow: hidden; }
+.deal-card-meter .f { height: 100%; background: var(--accent); border-radius: 99px; }
+.deal-card-meter .p { font-size: 11px; color: var(--fg-4); font-variant-numeric: tabular-nums; width: 30px; text-align: right; }
+.deal-card-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--divider); }
+.deal-card-val { font-size: 15px; font-weight: 650; color: var(--fg); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.deal-card-due { font-size: 11px; color: var(--fg-4); font-variant-numeric: tabular-nums; margin-top: 3px; }
+.deal-card-due.warn { color: var(--warn); font-weight: 500; }
+.deal-card-due.err  { color: var(--err); font-weight: 600; }
+.deal-card-advance {
+  width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-2); color: var(--fg-4); border: 1px solid var(--border);
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease);
+}
+.deal-card:hover .deal-card-advance { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* ──────────────── Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
