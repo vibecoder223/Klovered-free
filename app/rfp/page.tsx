@@ -1,14 +1,11 @@
 import PublicShell from "@/components/PublicShell";
-import { PageHeader } from "@/components/ui";
+import RfpUpload from "@/components/RfpUpload";
 
-// Step 2. Body (RFP upload + pipeline progress) is filled in Task 8.
+// Step 2 — RFP upload + extraction pipeline. PublicShell gates on session-ready.
 export default function RfpPage() {
   return (
     <PublicShell step={2}>
-      <PageHeader
-        title="Upload RFP"
-        sub="Upload the questionnaire you need answered. Klovered extracts each question and drafts a response."
-      />
+      <RfpUpload />
     </PublicShell>
   );
 }

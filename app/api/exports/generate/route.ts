@@ -106,11 +106,24 @@ export async function POST(req: Request) {
     template_id?: string | null;
   };
   const { deal_id } = body;
-  const docIds = body.document_ids?.length
+  let docIds = body.document_ids?.length
     ? body.document_ids
     : body.document_id
     ? [body.document_id]
     : [];
+
+  // Free single-RFP flow: the answers screen sends only deal_id. When no
+  // explicit document ids are provided, derive them from the deal's documents
+  // (RLS scopes this to the guest's org). This keeps the client export call
+  // simple while the route stays the single source of "what to export".
+  if (deal_id && docIds.length === 0) {
+    const { data: dealDocs } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("deal_id", deal_id)
+      .order("created_at", { ascending: true });
+    docIds = (dealDocs ?? []).map((d: { id: string }) => d.id);
+  }
   const merge = !!body.merge && docIds.length > 1;
   const format: "pdf" | "docx" = body.format === "docx" ? "docx" : "pdf";
   const citationStyle: "inline" | "footnote" =

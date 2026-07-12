@@ -1,14 +1,11 @@
 import PublicShell from "@/components/PublicShell";
-import { PageHeader } from "@/components/ui";
+import AnswersList from "@/components/AnswersList";
 
-// Step 3. Body (drafted answers + citations + export) is filled in Task 8.
+// Step 3 — drafted answers, confidence, citations, and .docx export.
 export default function AnswersPage() {
   return (
     <PublicShell step={3}>
-      <PageHeader
-        title="Answers"
-        sub="Review each drafted answer, its confidence, and its sources. Export when you are ready."
-      />
+      <AnswersList />
     </PublicShell>
   );
 }
