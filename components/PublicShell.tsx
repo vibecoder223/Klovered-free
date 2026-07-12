@@ -1,6 +1,7 @@
 "use client";
 import { createContext, useContext } from "react";
 import StepNav from "./StepNav";
+import AuthButton from "./AuthButton";
 import { Page } from "./ui";
 import { useGuestSession } from "@/lib/use-session";
 
@@ -55,8 +56,9 @@ export default function PublicShell({
         <div className="pub-nav-center">
           <StepNav current={step} />
         </div>
-        {/* Google sign-in button mounts here in Task 9. */}
-        <div className="pub-authslot" id="auth-slot" />
+        <div className="pub-authslot">
+          <AuthButton />
+        </div>
       </header>
 
       <main className="pub-main">
