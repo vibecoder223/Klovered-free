@@ -37,39 +37,12 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-anon-key
 
-  backend:
-    name: Backend — pytest (incl. two-tenant isolation gate)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-          cache: pip
-          cache-dependency-path: backend/pyproject.toml
-
-      - name: Install
-        run: pip install -e ".[dev]"
-
-      - name: Test
-        # tests/conftest.py isolates settings per-test (chdir to a temp cwd,
-        # no real .env.local) — no live Supabase/Mistral credentials needed.
-        # This includes test_isolation.py, the two-tenant isolation regression
-        # test that docs/superpowers/specs/2026-07-13-klovered-free-python-backend-design.md
-        # requires to pass before any request-surface cutover.
-        run: pytest -v
-
   deploy:
-    name: Deploy frontend to Vercel
-    # Frontend only — the Python backend (backend/) has no hosting target
-    # decided yet, so there's nothing to deploy it to. This job ships the
-    # Next.js app; PY_API_URL must point at wherever the backend ends up
-    # running for the deployed frontend's /api/pipeline/* proxy to work.
-    needs: [frontend, backend]
+    name: Deploy to Vercel
+    # Single Next.js app — all API logic runs in-app via Next route handlers
+    # (app/api/*), same as the main Propello/Klovered system, so there's nothing
+    # else to deploy.
+    needs: [frontend]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     steps:
