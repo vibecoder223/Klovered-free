@@ -172,7 +172,7 @@ function PeekKnowledge() {
     <div className="kf-pk">
       <div className="kf-pk-drop">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 15V5m0 0l-4 4m4-4l4 4" stroke="var(--accent)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M12 15V5m0 0l-4 4m4-4l4 4" stroke="var(--fg-4)" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M5 17h14" stroke="var(--border-strong)" strokeWidth="1.9" strokeLinecap="round" />
         </svg>
         <span>Drop files to add knowledge</span>
@@ -252,8 +252,8 @@ function PeekReady() {
 function FileGlyph() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M13 3H7a1 1 0 00-1 1v16a1 1 0 001 1h10a1 1 0 001-1V8l-5-5z" stroke="var(--accent-3)" strokeWidth="1.7" strokeLinejoin="round" />
-      <path d="M13 3v5h5" stroke="var(--accent-3)" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M13 3H7a1 1 0 00-1 1v16a1 1 0 001 1h10a1 1 0 001-1V8l-5-5z" stroke="var(--fg-4)" strokeWidth="1.7" strokeLinejoin="round" />
+      <path d="M13 3v5h5" stroke="var(--fg-4)" strokeWidth="1.7" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -261,7 +261,7 @@ function FileGlyph() {
 function CiteGlyph() {
   return (
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" stroke="var(--accent-3)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 7l-5 5 5 5M15 7l5 5-5 5" stroke="var(--fg-4)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
