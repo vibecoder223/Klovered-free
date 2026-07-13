@@ -5,6 +5,20 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 
+@pytest.fixture(autouse=True)
+def _isolate_settings(monkeypatch, tmp_path):
+    # Unit tests must not read the developer's real backend/.env.local (its keys
+    # would leak into "no key configured" tests). Run each test from a temp cwd
+    # with no env file, and give every test a clean settings cache. Tests that
+    # need specific values set them with monkeypatch.setenv + cache_clear().
+    from app import config
+
+    monkeypatch.chdir(tmp_path)
+    config.get_settings.cache_clear()
+    yield
+    config.get_settings.cache_clear()
+
+
 @pytest.fixture(scope="session")
 def rsa_key():
     return rsa.generate_private_key(public_exponent=65537, key_size=2048)
