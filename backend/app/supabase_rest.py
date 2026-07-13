@@ -93,6 +93,28 @@ class SupabaseRest:
             )
             resp.raise_for_status()
 
+    def get_auth_user(self, user_id: str) -> dict | None:
+        # GoTrue admin API, not PostgREST. Mirrors
+        # supabase.auth.admin.getUserById(userId). Service-role only.
+        settings = get_settings()
+        url = f"{settings.supabase_url}/auth/v1/admin/users/{user_id}"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.get(url, headers=self._headers)
+            if resp.status_code == 404:
+                return None
+            resp.raise_for_status()
+            return resp.json()
+
+    def delete_auth_user(self, user_id: str) -> None:
+        # Mirrors supabase.auth.admin.deleteUser(userId). Service-role only.
+        settings = get_settings()
+        url = f"{settings.supabase_url}/auth/v1/admin/users/{user_id}"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.delete(url, headers=self._headers)
+            if resp.status_code == 404:
+                return
+            resp.raise_for_status()
+
 
 def user_client(token: str) -> SupabaseRest:
     return SupabaseRest(token)

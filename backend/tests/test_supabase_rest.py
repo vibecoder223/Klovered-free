@@ -155,3 +155,42 @@ def test_try_service_client_returns_client_with_key(monkeypatch):
     _svc_env(monkeypatch)
     get_settings.cache_clear()
     assert try_service_client() is not None
+
+
+@respx.mock
+def test_get_auth_user_hits_gotrue_admin_endpoint(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.get("https://proj.supabase.co/auth/v1/admin/users/u1").mock(
+        return_value=httpx.Response(200, json={"id": "u1", "is_anonymous": True})
+    )
+    user = service_client().get_auth_user("u1")
+    assert user == {"id": "u1", "is_anonymous": True}
+    assert route.calls.last.request.headers["authorization"] == "Bearer svc-key"
+
+
+@respx.mock
+def test_get_auth_user_returns_none_on_404(monkeypatch):
+    _svc_env(monkeypatch)
+    respx.get("https://proj.supabase.co/auth/v1/admin/users/gone").mock(
+        return_value=httpx.Response(404, json={"message": "not found"})
+    )
+    assert service_client().get_auth_user("gone") is None
+
+
+@respx.mock
+def test_delete_auth_user_sends_delete(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.delete("https://proj.supabase.co/auth/v1/admin/users/u1").mock(
+        return_value=httpx.Response(200, json={})
+    )
+    service_client().delete_auth_user("u1")
+    assert route.calls.last.request.method == "DELETE"
+
+
+@respx.mock
+def test_delete_auth_user_swallows_404(monkeypatch):
+    _svc_env(monkeypatch)
+    respx.delete("https://proj.supabase.co/auth/v1/admin/users/gone").mock(
+        return_value=httpx.Response(404, json={"message": "not found"})
+    )
+    service_client().delete_auth_user("gone")  # no raise

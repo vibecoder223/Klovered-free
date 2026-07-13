@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 
 from .auth import AuthError
-from .routers import documents, jobs, knowledge, probe
+from .routers import cron, documents, jobs, knowledge, probe
 
 app = FastAPI(title="Klovered Free — pipeline API")
 
@@ -28,3 +28,4 @@ app.include_router(probe.router)
 app.include_router(jobs.router)
 app.include_router(documents.router)
 app.include_router(knowledge.router)
+app.include_router(cron.router)
