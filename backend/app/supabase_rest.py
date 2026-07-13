@@ -55,6 +55,16 @@ class SupabaseRest:
             resp.raise_for_status()
             return resp.json()
 
+    def download_storage(self, bucket: str, path: str) -> bytes:
+        # Storage lives under /storage/v1/object, not PostgREST. Mirrors the TS
+        # supabase.storage.from(bucket).download(path). Service-role only.
+        settings = get_settings()
+        url = f"{settings.supabase_url}/storage/v1/object/{bucket}/{path}"
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.get(url, headers=self._headers)
+            resp.raise_for_status()
+            return resp.content
+
 
 def user_client(token: str) -> SupabaseRest:
     return SupabaseRest(token)

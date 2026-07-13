@@ -87,3 +87,14 @@ def test_service_delete_sends_delete(monkeypatch):
     )
     service_client().delete("jobs", {"document_id": "eq.d-1"})
     assert route.calls.last.request.method == "DELETE"
+
+
+@respx.mock
+def test_download_storage_hits_object_endpoint(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.get(
+        "https://proj.supabase.co/storage/v1/object/documents/org/file.pdf"
+    ).mock(return_value=httpx.Response(200, content=b"%PDF-1.7 bytes"))
+    data = service_client().download_storage("documents", "org/file.pdf")
+    assert data == b"%PDF-1.7 bytes"
+    assert route.calls.last.request.headers["authorization"] == "Bearer svc-key"
