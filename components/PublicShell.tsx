@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import StepNav from "./StepNav";
 import AuthButton from "./AuthButton";
 import { useGuestSession } from "@/lib/use-session";
@@ -22,6 +22,15 @@ export const useSession = () => useContext(SessionCtx);
 const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "/";
 
 function PreparingSession() {
+  // If bootstrap is still not ready after a grace period, the retries in
+  // useGuestSession have almost certainly been exhausted — offer a manual
+  // reload so the visitor is never permanently stranded on the skeleton.
+  const [stalled, setStalled] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setStalled(true), 9000);
+    return () => clearTimeout(t);
+  }, []);
+
   return (
     <div className="kf-card" style={{ padding: 16 }}>
       <div aria-hidden="true">
@@ -29,9 +38,31 @@ function PreparingSession() {
         <div className="kf-skel-line" style={{ width: "62%", marginTop: 10 }} />
         <div className="kf-skel-line" style={{ width: "52%", marginTop: 10 }} />
       </div>
-      <p style={{ marginTop: 16, fontSize: 12.5, color: "var(--fg-4)" }} role="status">
-        Preparing your private session.
-      </p>
+      {stalled ? (
+        <p style={{ marginTop: 16, fontSize: 12.5, color: "var(--fg-3)" }} role="alert">
+          This is taking longer than usual.{" "}
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              font: "inherit",
+              color: "var(--accent-3)",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Reload
+          </button>{" "}
+          to retry.
+        </p>
+      ) : (
+        <p style={{ marginTop: 16, fontSize: 12.5, color: "var(--fg-4)" }} role="status">
+          Preparing your private session.
+        </p>
+      )}
     </div>
   );
 }
@@ -55,9 +86,6 @@ export default function PublicShell({
           <StepNav current={step} />
         </div>
         <div className="pub-authslot">
-          <a className="pub-fullplatform" href={MARKETING_URL}>
-            Full platform
-          </a>
           <AuthButton />
         </div>
       </header>
