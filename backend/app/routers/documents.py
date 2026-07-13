@@ -1,12 +1,18 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+import re
+import time
+
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 
+from ..activity import log_activity
 from ..config import get_settings
 from ..deps import GuestContext, require_guest
 from ..pipeline.jobs import enqueue_ingest, run_drain
 from ..supabase_rest import try_service_client, user_client
 
 router = APIRouter(prefix="/api/pipeline/documents", tags=["documents"])
+
+_UNSAFE_CHARS = re.compile(r"[^a-zA-Z0-9._-]")
 
 
 class ProcessBody(BaseModel):
@@ -20,6 +26,126 @@ def _org_id_from_doc(doc: dict) -> str | None:
     if isinstance(deals, list) and deals:
         return deals[0].get("org_id")
     return None
+
+
+@router.post("/upload")
+async def upload(
+    file: UploadFile = File(...),
+    deal_id: str = Form(...),
+    ctx: GuestContext = Depends(require_guest),
+) -> dict:
+    db = user_client(ctx.token)
+
+    deal_rows = db.get(
+        "deals", {"select": "id,org_id", "id": f"eq.{deal_id}", "limit": "1"}
+    )
+    if not deal_rows:
+        raise HTTPException(status_code=404, detail="Deal not found")
+    deal = deal_rows[0]
+
+    existing = db.get(
+        "documents", {"select": "id", "deal_id": f"eq.{deal_id}", "limit": "1"}
+    )
+    if existing:
+        raise HTTPException(
+            status_code=403,
+            detail="Free limit: one RFP per session. Delete the current one first.",
+        )
+
+    filename = file.filename or "upload"
+    safe_name = _UNSAFE_CHARS.sub("_", filename)
+    object_path = f"{deal_id}/{int(time.time() * 1000)}-{safe_name}"
+    content_type = file.content_type or "application/octet-stream"
+    data = await file.read()
+
+    # Prefer admin for storage write to avoid edge cases with RLS on
+    # storage.objects. Falls back to user-context — the migration has Storage
+    # RLS policies for org members.
+    storage = try_service_client() or db
+    storage.upload_storage("documents", object_path, data, content_type)
+
+    try:
+        rows = db.insert(
+            "documents",
+            {
+                "deal_id": deal_id,
+                "filename": filename,
+                "file_path": object_path,
+                "file_size": len(data),
+                "mime_type": content_type,
+                "processing_status": "uploaded",
+            },
+        )
+    except Exception as e:  # noqa: BLE001 — mirror TS: roll back the upload on insert failure
+        storage.remove_storage("documents", [object_path])
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    doc = rows[0]
+
+    log_activity(
+        db,
+        org_id=deal["org_id"],
+        user_id=ctx.user_id,
+        action="uploaded",
+        entity_type="document",
+        entity_id=doc["id"],
+        metadata={"filename": filename, "size": len(data)},
+    )
+
+    return {"document": doc}
+
+
+@router.get("/{document_id}")
+async def get_document(
+    document_id: str, ctx: GuestContext = Depends(require_guest)
+) -> dict:
+    db = user_client(ctx.token)
+    rows = db.get(
+        "documents",
+        {
+            "select": "id,processing_status,error_message",
+            "id": f"eq.{document_id}",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Not found")
+    return {"document": rows[0]}
+
+
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: str, ctx: GuestContext = Depends(require_guest)
+) -> dict:
+    db = user_client(ctx.token)
+    rows = db.get(
+        "documents",
+        {
+            "select": "id,file_path,deal_id,deals(org_id)",
+            "id": f"eq.{document_id}",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Not found")
+    doc = rows[0]
+
+    writer = try_service_client() or db
+
+    # Storage cleanup first (best-effort — a stale object is better than a
+    # failed delete; mirrors the TS route not checking the remove() result).
+    if doc.get("file_path"):
+        try:
+            writer.remove_storage("documents", [doc["file_path"]])
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Cascade deletes happen via FK on questions/extracted_requirements/etc.
+    try:
+        writer.delete("documents", {"id": f"eq.{document_id}"})
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    return {"ok": True}
 
 
 # Enqueue-only. The pipeline runs asynchronously: this just queues the first

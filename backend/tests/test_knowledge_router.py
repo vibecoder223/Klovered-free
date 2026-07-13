@@ -10,13 +10,15 @@ client = TestClient(app, raise_server_exceptions=False)
 
 
 class FakeDb:
-    def __init__(self, docs=None, insert_error=None):
+    def __init__(self, docs=None, insert_error=None, delete_error=None):
         self.docs = docs if docs is not None else []
         self.inserts = []
         self.updates = []
         self.uploads = []
         self.removed = []
+        self.deletes = []
         self.insert_error = insert_error
+        self.delete_error = delete_error
 
     def get(self, table, params):
         return self.docs
@@ -30,6 +32,11 @@ class FakeDb:
     def update(self, table, params, patch):
         self.updates.append((table, params, patch))
         return []
+
+    def delete(self, table, params):
+        self.deletes.append((table, params))
+        if self.delete_error:
+            raise self.delete_error
 
     def upload_storage(self, bucket, path, data, content_type):
         self.uploads.append((bucket, path, len(data), content_type))
@@ -166,3 +173,75 @@ def test_upload_ingest_failure_marks_document_failed(stub_auth, monkeypatch):
     assert r.status_code == 200  # upload UX shouldn't hard-fail
     assert db.updates[-1][2]["ingestion_status"] == "failed"
     assert "parse blew up" in db.updates[-1][2]["error_message"]
+
+
+# ---------- list / get / delete ----------
+
+
+def test_list_knowledge_returns_items(stub_auth, monkeypatch):
+    rows = [{"id": "kd-1", "filename": "a.pdf"}]
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: FakeDb(docs=rows))
+    r = client.get("/api/pipeline/knowledge", headers=AUTH)
+    assert r.status_code == 200
+    assert r.json() == {"items": rows}
+
+
+def test_get_knowledge_not_found(stub_auth, monkeypatch):
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: FakeDb(docs=[]))
+    r = client.get("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    assert r.status_code == 404
+
+
+def test_get_knowledge_extracts_stage_from_error_message(stub_auth, monkeypatch):
+    db = FakeDb(docs=[{
+        "id": "kd-1", "ingestion_status": "processing",
+        "error_message": "STAGE:embedding", "page_count": 3,
+    }])
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: db)
+    r = client.get("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    assert r.status_code == 200
+    body = r.json()["knowledge_document"]
+    assert body == {
+        "id": "kd-1", "ingestion_status": "processing",
+        "stage": "embedding", "error_message": None, "page_count": 3,
+    }
+
+
+def test_get_knowledge_passes_through_real_error(stub_auth, monkeypatch):
+    db = FakeDb(docs=[{
+        "id": "kd-1", "ingestion_status": "failed",
+        "error_message": "No content extracted from document.", "page_count": None,
+    }])
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: db)
+    r = client.get("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    body = r.json()["knowledge_document"]
+    assert body["stage"] is None
+    assert body["error_message"] == "No content extracted from document."
+
+
+def test_delete_knowledge_not_found(stub_auth, monkeypatch):
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: FakeDb(docs=[]))
+    r = client.delete("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    assert r.status_code == 404
+
+
+def test_delete_knowledge_removes_row_then_storage(stub_auth, monkeypatch):
+    db = FakeDb(docs=[{"id": "kd-1", "file_path": "org-9/f.pdf"}])
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: db)
+    monkeypatch.setattr(knowledge_router, "try_service_client", lambda: None)
+
+    r = client.delete("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    assert r.status_code == 200
+    assert r.json() == {"ok": True}
+    assert db.deletes == [("knowledge_documents", {"id": "eq.kd-1"})]
+    assert db.removed == [("knowledge", ["org-9/f.pdf"])]
+
+
+def test_delete_knowledge_db_failure_is_500(stub_auth, monkeypatch):
+    db = FakeDb(docs=[{"id": "kd-1", "file_path": "org-9/f.pdf"}], delete_error=RuntimeError("db down"))
+    monkeypatch.setattr(knowledge_router, "user_client", lambda token: db)
+    monkeypatch.setattr(knowledge_router, "try_service_client", lambda: None)
+
+    r = client.delete("/api/pipeline/knowledge/kd-1", headers=AUTH)
+    assert r.status_code == 500
+    assert db.removed == []  # storage untouched — row delete failed first

@@ -103,3 +103,84 @@ async def upload(
         )
 
     return {"knowledge_document": row}
+
+
+@router.get("")
+async def list_knowledge(ctx: GuestContext = Depends(require_guest)) -> dict:
+    db = user_client(ctx.token)
+    rows = db.get(
+        "knowledge_documents",
+        {
+            "select": "id,filename,doc_type,ingestion_status,page_count,file_size,created_at,error_message",
+            "order": "created_at.desc",
+        },
+    )
+    return {"items": rows or []}
+
+
+def _stage_and_error(error_message: str | None) -> tuple[str | None, str | None]:
+    # Stage updates are written to error_message with "STAGE:" prefix by the
+    # ingest pipeline so the UI can poll progress without a schema change.
+    err = error_message or ""
+    if err.startswith("STAGE:"):
+        return err[len("STAGE:") :], None
+    return None, error_message
+
+
+@router.get("/{knowledge_id}")
+async def get_knowledge(
+    knowledge_id: str, ctx: GuestContext = Depends(require_guest)
+) -> dict:
+    db = user_client(ctx.token)
+    rows = db.get(
+        "knowledge_documents",
+        {
+            "select": "id,ingestion_status,error_message,page_count",
+            "id": f"eq.{knowledge_id}",
+            "limit": "1",
+        },
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Not found")
+    row = rows[0]
+    stage, error_message = _stage_and_error(row.get("error_message"))
+    return {
+        "knowledge_document": {
+            "id": row["id"],
+            "ingestion_status": row["ingestion_status"],
+            "stage": stage,
+            "error_message": error_message,
+            "page_count": row.get("page_count"),
+        }
+    }
+
+
+@router.delete("/{knowledge_id}")
+async def delete_knowledge(
+    knowledge_id: str, ctx: GuestContext = Depends(require_guest)
+) -> dict:
+    db = user_client(ctx.token)
+    # Look up the file_path under RLS first to confirm access.
+    rows = db.get(
+        "knowledge_documents",
+        {"select": "id,file_path", "id": f"eq.{knowledge_id}", "limit": "1"},
+    )
+    if not rows:
+        raise HTTPException(status_code=404, detail="Not found")
+    kdoc = rows[0]
+
+    writer = try_service_client() or db
+
+    # Chunks cascade via FK on knowledge_document_id; row delete also removes them.
+    try:
+        writer.delete("knowledge_documents", {"id": f"eq.{knowledge_id}"})
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+    # Best-effort storage purge — leave a stale object rather than fail the delete.
+    try:
+        writer.remove_storage("knowledge", [kdoc["file_path"]])
+    except Exception:  # noqa: BLE001
+        pass
+
+    return {"ok": True}
