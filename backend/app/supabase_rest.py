@@ -65,6 +65,34 @@ class SupabaseRest:
             resp.raise_for_status()
             return resp.content
 
+    def upload_storage(self, bucket: str, path: str, data: bytes, content_type: str) -> None:
+        # Mirrors supabase.storage.from(bucket).upload(path, data, {contentType}).
+        settings = get_settings()
+        url = f"{settings.supabase_url}/storage/v1/object/{bucket}/{path}"
+        headers = {**self._headers, "Content-Type": content_type}
+        with httpx.Client(timeout=60.0) as client:
+            resp = client.post(url, headers=headers, content=data)
+            resp.raise_for_status()
+
+    def list_storage(self, bucket: str, prefix: str, limit: int = 1000) -> list[dict]:
+        # Mirrors supabase.storage.from(bucket).list(prefix, {limit}).
+        settings = get_settings()
+        url = f"{settings.supabase_url}/storage/v1/object/list/{bucket}"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.post(url, headers=self._headers, json={"prefix": prefix, "limit": limit})
+            resp.raise_for_status()
+            return resp.json()
+
+    def remove_storage(self, bucket: str, paths: list[str]) -> None:
+        # Mirrors supabase.storage.from(bucket).remove(paths).
+        settings = get_settings()
+        url = f"{settings.supabase_url}/storage/v1/object/{bucket}"
+        with httpx.Client(timeout=30.0) as client:
+            resp = client.request(
+                "DELETE", url, headers=self._headers, json={"prefixes": paths}
+            )
+            resp.raise_for_status()
+
 
 def user_client(token: str) -> SupabaseRest:
     return SupabaseRest(token)
@@ -72,6 +100,14 @@ def user_client(token: str) -> SupabaseRest:
 
 def service_client() -> SupabaseRest:
     return SupabaseRest(get_settings().supabase_service_role_key, is_service_role=True)
+
+
+def try_service_client() -> SupabaseRest | None:
+    """Service client if SUPABASE_SERVICE_ROLE_KEY is configured, else None —
+    mirrors the TS tryCreateAdminClient() fallback-to-user-client pattern."""
+    if not get_settings().supabase_service_role_key:
+        return None
+    return service_client()
 
 
 def resolve_org(token: str, user_id: str) -> str | None:

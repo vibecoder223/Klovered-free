@@ -98,3 +98,60 @@ def test_download_storage_hits_object_endpoint(monkeypatch):
     data = service_client().download_storage("documents", "org/file.pdf")
     assert data == b"%PDF-1.7 bytes"
     assert route.calls.last.request.headers["authorization"] == "Bearer svc-key"
+
+
+@respx.mock
+def test_upload_storage_posts_bytes_with_content_type(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.post(
+        "https://proj.supabase.co/storage/v1/object/knowledge/org/file.pdf"
+    ).mock(return_value=httpx.Response(200, json={"Key": "knowledge/org/file.pdf"}))
+    service_client().upload_storage("knowledge", "org/file.pdf", b"bytes", "application/pdf")
+    sent = route.calls.last.request
+    assert sent.content == b"bytes"
+    assert sent.headers["content-type"] == "application/pdf"
+
+
+@respx.mock
+def test_list_storage_posts_prefix_and_limit(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.post("https://proj.supabase.co/storage/v1/object/list/knowledge").mock(
+        return_value=httpx.Response(200, json=[{"name": "file.pdf"}])
+    )
+    out = service_client().list_storage("knowledge", "org-9", limit=500)
+    assert out == [{"name": "file.pdf"}]
+    import json as _json
+    assert _json.loads(route.calls.last.request.content) == {"prefix": "org-9", "limit": 500}
+
+
+@respx.mock
+def test_remove_storage_sends_prefixes(monkeypatch):
+    _svc_env(monkeypatch)
+    route = respx.delete("https://proj.supabase.co/storage/v1/object/knowledge").mock(
+        return_value=httpx.Response(200, json={})
+    )
+    service_client().remove_storage("knowledge", ["org/a.pdf", "org/b.pdf"])
+    import json as _json
+    assert _json.loads(route.calls.last.request.content) == {
+        "prefixes": ["org/a.pdf", "org/b.pdf"]
+    }
+
+
+def test_try_service_client_returns_none_without_key(monkeypatch):
+    from app.config import get_settings
+    from app.supabase_rest import try_service_client
+
+    monkeypatch.setenv("NEXT_PUBLIC_SUPABASE_URL", "https://proj.supabase.co")
+    monkeypatch.setenv("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "anon-key")
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    get_settings.cache_clear()
+    assert try_service_client() is None
+
+
+def test_try_service_client_returns_client_with_key(monkeypatch):
+    from app.config import get_settings
+    from app.supabase_rest import try_service_client
+
+    _svc_env(monkeypatch)
+    get_settings.cache_clear()
+    assert try_service_client() is not None

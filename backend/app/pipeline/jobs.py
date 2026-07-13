@@ -108,6 +108,62 @@ def enqueue_ingest(db, *, document_id: str, org_id: str) -> None:
     enqueue_job(db, document_id=document_id, org_id=org_id, stage="ingest")
 
 
+# ---------- drain (port of app/api/jobs/drain/route.ts) ----------
+
+DRAIN_BATCH = 8
+DRAIN_TIME_BUDGET_MS = 4 * 60_000
+
+
+async def run_drain(
+    db, *, batch: int = DRAIN_BATCH, time_budget_ms: float = DRAIN_TIME_BUDGET_MS
+) -> dict:
+    """Heartbeat drain loop: recover stuck claims, then claim a small batch, run
+    it concurrently, enqueue successors, repeat — until the queue is empty or
+    the time budget is spent. Called directly in-process (this is a persistent
+    server, not serverless, so no self-HTTP round-trip is needed as the TS
+    fire-and-forget fetch did)."""
+    recover_stuck_jobs(db)
+
+    started_at = time.time() * 1000
+    all_results: list[dict] = []
+    total_claimed = 0
+
+    while True:
+        claimed = claim_jobs(db, batch)
+        if not claimed:
+            break
+        total_claimed += len(claimed)
+        touched_docs: set[str] = set()
+
+        async def _run_one(job: Job) -> dict:
+            touched_docs.add(job.document_id)
+            try:
+                await run_job(db, job)
+                # Enqueue successors BEFORE marking done. If this crashes
+                # mid-fan-out the stage stays claimed, gets recovered, and
+                # re-runs — re-enqueue is idempotent (unique-live index).
+                # Marking done first would leave a permanent gap: a "done"
+                # stage with missing successors that nothing ever revisits.
+                enqueue_successors(db, job)
+                mark_done(db, job.id)
+                return {"id": job.id, "stage": job.stage, "ok": True}
+            except Exception as e:  # noqa: BLE001 — record then continue draining
+                mark_failed(db, job, str(e) or "stage failed")
+                return {"id": job.id, "stage": job.stage, "ok": False, "error": str(e)}
+
+        results = await asyncio.gather(*(_run_one(job) for job in claimed))
+        all_results.extend(results)
+
+        # Status updates inside the loop so the UI tracks progress live.
+        for document_id in touched_docs:
+            derive_doc_status(db, document_id)
+
+        if time.time() * 1000 - started_at > time_budget_ms:
+            break
+
+    return {"claimed": total_claimed, "results": all_results}
+
+
 # ---------- claim / drain primitives ----------
 
 
