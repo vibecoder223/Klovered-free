@@ -1,0 +1,103 @@
+# Render blueprint for the Klovered Free Python backend (backend/).
+#
+# One-click deploy: in Render, New > Blueprint, connect this repo. Render reads
+# this file and provisions everything below. You'll be prompted for the secret
+# values marked `sync: false` (paste them from backend/.env.local). CRON_SECRET
+# is generated automatically and shared across all three services.
+#
+# The frontend (Next.js) deploys separately to Vercel (see .github/workflows/
+# ci.yml). Point that deployment's PY_API_URL at this web service's URL so its
+# /api/pipeline/* proxy reaches the backend.
+#
+# Region: Frankfurt — closest to the Supabase project (eu-central-1) and keeps
+# data in the EU, consistent with the private-cloud direction.
+
+envVarGroups:
+  - name: klovered-free-secrets
+    envVars:
+      # App secrets — set these in the Render dashboard on first deploy.
+      # Names match backend/app/config.py's validation aliases.
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      # Shared secret between the scheduled jobs and the /drain + /cleanup
+      # endpoints. Generated once by Render and reused everywhere via the group,
+      # so the cron callers and the API always agree without manual copying.
+      - key: CRON_SECRET
+        generateValue: true
+
+services:
+  # ── FastAPI web service ──────────────────────────────────────────────────
+  - type: web
+    name: klovered-free-api
+    runtime: docker
+    repo: https://github.com/vibecoder223/Klovered-free.git
+    branch: master
+    region: frankfurt
+    plan: starter # smallest always-on paid instance; free tier sleeps + has no crons
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    # Bind Render's injected $PORT rather than the Dockerfile's hardcoded 8000.
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - fromGroup: klovered-free-secrets
+
+  # ── Job-queue drain (heartbeat) ──────────────────────────────────────────
+  # POSTs the drain endpoint every minute. run_drain also recovers stuck claims,
+  # so this doubles as the crash-recovery net for the async pipeline.
+  - type: cron
+    name: klovered-free-drain
+    runtime: docker
+    repo: https://github.com/vibecoder223/Klovered-free.git
+    branch: master
+    region: frankfurt
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    schedule: "* * * * *" # every minute
+    # stdlib-only POST (python:3.12-slim has no curl). API_HOST is injected from
+    # the web service below; we prepend https:// and send the shared cron secret.
+    dockerCommand: >-
+      python -c "import os,urllib.request as u;
+      u.urlopen(u.Request('https://'+os.environ['API_HOST']+'/api/pipeline/jobs/drain',
+      method='POST', headers={'X-Cron-Secret': os.environ['CRON_SECRET']}), timeout=110)"
+    envVars:
+      - fromGroup: klovered-free-secrets
+      - key: API_HOST
+        fromService:
+          type: web
+          name: klovered-free-api
+          property: host
+
+  # ── Guest cleanup (48h retention) ────────────────────────────────────────
+  # Purges anonymous guest orgs older than the retention window. Daily is plenty.
+  - type: cron
+    name: klovered-free-cleanup
+    runtime: docker
+    repo: https://github.com/vibecoder223/Klovered-free.git
+    branch: master
+    region: frankfurt
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    schedule: "0 3 * * *" # daily at 03:00 UTC
+    dockerCommand: >-
+      python -c "import os,urllib.request as u;
+      u.urlopen(u.Request('https://'+os.environ['API_HOST']+'/api/pipeline/cron/cleanup',
+      method='POST', headers={'X-Cron-Secret': os.environ['CRON_SECRET']}), timeout=110)"
+    envVars:
+      - fromGroup: klovered-free-secrets
+      - key: API_HOST
+        fromService:
+          type: web
+          name: klovered-free-api
+          property: host
