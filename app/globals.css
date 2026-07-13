@@ -1756,23 +1756,17 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
   animation: kf-ob-rise 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .kf-ob-skip {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 2;
-  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  background: none;
   border: none;
-  padding: 5px 11px;
+  padding: 4px 2px;
   font: inherit;
   font-size: 12px;
   font-weight: 500;
-  color: var(--fg-3);
+  color: var(--fg-4);
   cursor: pointer;
-  border-radius: 100px;
-  backdrop-filter: blur(4px);
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease;
 }
-.kf-ob-skip:hover { color: var(--fg); background: var(--surface); }
+.kf-ob-skip:hover { color: var(--fg-2); }
 
 /* Hero: a full-bleed "window into the tool". Fixed height so paging never
  * resizes the card, warm tint behind, and a soft bottom fade so the peek reads

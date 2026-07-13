@@ -108,15 +108,6 @@ export default function OnboardingOverlay() {
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          className="kf-ob-skip"
-          onClick={dismiss}
-          aria-label="Skip introduction"
-        >
-          Skip
-        </button>
-
         <div className="kf-ob-hero">
           <div className="kf-ob-peek" key={i} aria-hidden="true">
             {slide.peek}
@@ -135,6 +126,18 @@ export default function OnboardingOverlay() {
           </div>
 
           <div className="kf-ob-foot">
+            {!last ? (
+              <button
+                type="button"
+                className="kf-ob-skip"
+                onClick={dismiss}
+                aria-label="Skip introduction"
+              >
+                Skip
+              </button>
+            ) : (
+              <span aria-hidden="true" />
+            )}
             <div className="kf-ob-dots" role="tablist" aria-label="Introduction progress">
               {SLIDES.map((_, n) => (
                 <button
