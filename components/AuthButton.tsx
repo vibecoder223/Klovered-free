@@ -1,17 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import AuthModal from "./AuthModal";
 
-// Header auth control. For an anonymous guest it shows a button that opens the
-// sign-in / sign-up modal (Google or email+password). Once the session is
-// permanent we show the email as a "saved" badge instead — the account is
-// upgraded in place, so there's nothing more to do.
+// Header auth control.
+//  • Anonymous guest → a button that opens the sign-in / sign-up modal.
+//  • Permanent account → the email shown as a "saved" badge that opens a small
+//    menu with Sign out. Signing out drops the permanent session; on reload the
+//    app bootstraps a fresh anonymous guest (see useGuestSession), so the tool
+//    stays usable without an account.
 export default function AuthButton() {
   const [email, setEmail] = useState<string | null>(null);
   const [anon, setAnon] = useState(true);
-  const [open, setOpen] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -26,18 +31,65 @@ export default function AuthButton() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  // Close the account menu on outside click / Escape.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    window.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  async function signOut() {
+    if (signingOut) return;
+    setSigningOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    // Reload so useGuestSession provisions a fresh anonymous session on the
+    // same page — the visitor keeps using the tool, just no longer signed in.
+    window.location.reload();
+  }
+
   if (!anon && email) {
     return (
-      <span className="pub-saved" title={`Signed in as ${email}. Your work is saved.`}>
-        <span className="pub-saved-dot" aria-hidden="true" />
-        {email}
-      </span>
+      <div className="pub-account" ref={menuRef}>
+        <button
+          className="pub-saved pub-saved-btn"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          title={`Signed in as ${email}`}
+        >
+          <span className="pub-saved-dot" aria-hidden="true" />
+          <span className="pub-saved-email">{email}</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="pub-saved-caret">
+            <path fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
+        {menuOpen && (
+          <div className="pub-menu" role="menu">
+            <div className="pub-menu-head">
+              <span className="pub-menu-label">Signed in as</span>
+              <span className="pub-menu-email">{email}</span>
+            </div>
+            <button className="pub-menu-item" role="menuitem" onClick={signOut} disabled={signingOut}>
+              {signingOut ? "Signing out…" : "Sign out"}
+            </button>
+          </div>
+        )}
+      </div>
     );
   }
 
   return (
     <>
-      <button className="btn pub-signin" onClick={() => setOpen(true)}>
+      <button className="btn pub-signin" onClick={() => setModalOpen(true)}>
         <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
           <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
           <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
@@ -46,7 +98,7 @@ export default function AuthButton() {
         </svg>
         Sign in to keep your work
       </button>
-      {open && <AuthModal onClose={() => setOpen(false)} />}
+      {modalOpen && <AuthModal onClose={() => setModalOpen(false)} />}
     </>
   );
 }

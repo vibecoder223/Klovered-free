@@ -1274,6 +1274,37 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--accent); flex-shrink: 0;
 }
+
+/* Account badge → dropdown with Sign out */
+.pub-account { position: relative; }
+.pub-saved-btn {
+  border: 1px solid transparent; background: transparent;
+  padding: 5px 8px; border-radius: 9px; cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.pub-saved-btn:hover { background: var(--bg-2); border-color: var(--border); }
+.pub-saved-email { overflow: hidden; text-overflow: ellipsis; }
+.pub-saved-caret { color: var(--fg-4); flex-shrink: 0; }
+.pub-menu {
+  position: absolute; top: calc(100% + 6px); right: 0; z-index: 30;
+  min-width: 220px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 14px 34px -12px oklch(0.20 0.015 152 / 0.28), 0 3px 8px -3px oklch(0.20 0.015 152 / 0.12);
+  animation: auth-rise 0.14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pub-menu-head {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 8px 10px 10px; border-bottom: 1px solid var(--border); margin-bottom: 6px;
+}
+.pub-menu-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--fg-5); }
+.pub-menu-email { font-size: 12.5px; color: var(--fg-2); font-weight: 550; overflow: hidden; text-overflow: ellipsis; }
+.pub-menu-item {
+  width: 100%; text-align: left; padding: 8px 10px; border: none; border-radius: 8px;
+  background: transparent; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--fg);
+}
+.pub-menu-item:hover { background: var(--bg-2); }
+.pub-menu-item:disabled { opacity: 0.6; cursor: not-allowed; }
 @media (max-width: 640px) {
   .pub-signin { font-size: 0; gap: 0; }
   .pub-signin svg { margin: 0; }
