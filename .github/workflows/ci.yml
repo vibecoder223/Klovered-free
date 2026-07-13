@@ -1,10 +1,12 @@
 name: CI
 
+# NOTE: this repo's default branch is `master`, not `main` — verify with
+# `git remote show origin` before "fixing" this if it looks wrong later.
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -60,3 +62,28 @@ jobs:
         # test that docs/superpowers/specs/2026-07-13-klovered-free-python-backend-design.md
         # requires to pass before any request-surface cutover.
         run: pytest -v
+
+  deploy:
+    name: Deploy frontend to Vercel
+    # Frontend only — the Python backend (backend/) has no hosting target
+    # decided yet, so there's nothing to deploy it to. This job ships the
+    # Next.js app; PY_API_URL must point at wherever the backend ends up
+    # running for the deployed frontend's /api/pipeline/* proxy to work.
+    needs: [frontend, backend]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Deploy (Vercel)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          npm i -g vercel@latest
+          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
+          vercel build --prod --token="$VERCEL_TOKEN"
+          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"
