@@ -53,15 +53,29 @@ class FakeDb:
         self.removed_storage.append((bucket, paths))
 
 
-def test_cleanup_forbidden_without_secret():
+def test_cleanup_without_secret_configured_is_503():
+    # Unified with drain via verify_cron_request: a missing server-side
+    # CRON_SECRET is a misconfiguration (503), not a client auth failure (403).
     r = client.post("/api/pipeline/cron/cleanup", headers={"x-cron-secret": "x"})
-    assert r.status_code == 403
+    assert r.status_code == 503
 
 
 def test_cleanup_forbidden_wrong_secret(monkeypatch):
     _set_secret(monkeypatch)
     r = client.post("/api/pipeline/cron/cleanup", headers={"x-cron-secret": "wrong"})
     assert r.status_code == 403
+
+
+def test_cleanup_accepts_get_with_bearer(monkeypatch):
+    # Vercel Cron issues GET with Authorization: Bearer <CRON_SECRET>.
+    _set_secret(monkeypatch)
+    db = FakeDb(orgs=[])
+    monkeypatch.setattr(cron_router, "service_client", lambda: db)
+    r = client.get(
+        "/api/pipeline/cron/cleanup",
+        headers={"authorization": "Bearer s3cret"},
+    )
+    assert r.status_code == 200
 
 
 def test_cleanup_purges_all_anonymous_org(monkeypatch):

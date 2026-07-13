@@ -38,3 +38,16 @@ def test_drain_runs_and_returns_result(monkeypatch):
     assert r.status_code == 200
     assert r.json() == {"claimed": 3, "results": [{"id": "j1", "stage": "ingest", "ok": True}]}
     assert seen["called"]
+
+
+def test_drain_accepts_get_with_bearer(monkeypatch):
+    # Vercel Cron issues GET with Authorization: Bearer <CRON_SECRET>.
+    _set_secret(monkeypatch)
+
+    async def fake_run_drain(db):
+        return {"claimed": 0, "results": []}
+
+    monkeypatch.setattr(jobs_router, "run_drain", fake_run_drain)
+    r = client.get("/api/pipeline/jobs/drain", headers={"authorization": "Bearer s3cret"})
+    assert r.status_code == 200
+    assert r.json() == {"claimed": 0, "results": []}

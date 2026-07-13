@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import time
 
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Depends
 
-from ..config import get_settings
+from ..cron_auth import verify_cron_request
 from ..supabase_rest import SupabaseRest, service_client
 
 router = APIRouter(prefix="/api/pipeline/cron", tags=["cron"])
@@ -36,12 +36,10 @@ def _empty_bucket_folder(db: SupabaseRest, bucket: str, prefix: str) -> int:
     return len(paths)
 
 
-@router.post("/cleanup")
-async def cleanup(x_cron_secret: str = Header(default="")) -> dict:
-    secret = get_settings().cron_secret
-    if not secret or x_cron_secret != secret:
-        raise HTTPException(status_code=403, detail="Forbidden")
-
+# GET and POST both allowed (Vercel Cron issues GET; external callers POST).
+# Auth (X-Cron-Secret or Bearer <secret>) is enforced by verify_cron_request.
+@router.api_route("/cleanup", methods=["GET", "POST"], dependencies=[Depends(verify_cron_request)])
+async def cleanup() -> dict:
     db = service_client()
     cutoff = _iso_ms_ago(WINDOW_MS)
 
