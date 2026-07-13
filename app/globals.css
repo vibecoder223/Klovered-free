@@ -1288,6 +1288,99 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
   line-height: 1.5;
 }
 
+/* Auth modal (guest → permanent: Google or email/password) */
+.auth-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: oklch(0.20 0.015 152 / 0.42);
+  backdrop-filter: blur(3px);
+  animation: auth-fade 0.14s ease-out;
+}
+@keyframes auth-fade { from { opacity: 0; } to { opacity: 1; } }
+.auth-modal {
+  position: relative;
+  width: 100%; max-width: 384px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 26px 24px;
+  box-shadow: 0 24px 60px -18px oklch(0.20 0.015 152 / 0.35), 0 4px 12px -4px oklch(0.20 0.015 152 / 0.14);
+  animation: auth-rise 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes auth-rise { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.auth-close {
+  position: absolute; top: 12px; right: 14px;
+  width: 28px; height: 28px; border-radius: 8px;
+  border: none; background: transparent; cursor: pointer;
+  font-size: 22px; line-height: 1; color: var(--fg-4);
+  display: flex; align-items: center; justify-content: center;
+}
+.auth-close:hover { background: var(--bg-2); color: var(--fg-2); }
+.auth-title {
+  font-size: 19px; font-weight: 640; letter-spacing: -0.02em;
+  color: var(--fg); margin: 0 0 5px;
+}
+.auth-sub {
+  font-size: 12.5px; line-height: 1.5; color: var(--fg-3);
+  margin: 0 0 20px; padding-right: 20px;
+}
+.auth-google {
+  width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  height: 40px; border-radius: 10px;
+  border: 1px solid var(--border-strong); background: var(--surface);
+  font-size: 13.5px; font-weight: 550; color: var(--fg);
+  cursor: pointer; transition: background 0.12s, border-color 0.12s;
+}
+.auth-google:hover { background: var(--bg-2); }
+.auth-google:disabled { opacity: 0.55; cursor: not-allowed; }
+.auth-divider {
+  display: flex; align-items: center; gap: 12px;
+  margin: 16px 0; color: var(--fg-5); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+}
+.auth-divider::before, .auth-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--border);
+}
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-field { display: flex; flex-direction: column; gap: 5px; }
+.auth-field span { font-size: 12px; font-weight: 550; color: var(--fg-2); }
+.auth-field input {
+  height: 40px; padding: 0 12px;
+  border: 1px solid var(--border-strong); border-radius: 10px;
+  background: var(--surface); color: var(--fg); font-size: 13.5px;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.auth-field input:focus {
+  outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.auth-submit {
+  height: 40px; margin-top: 4px; border: none; border-radius: 10px;
+  background: var(--accent); color: white; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: background 0.12s;
+}
+.auth-submit:hover { background: var(--accent-2); }
+.auth-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.auth-error {
+  font-size: 12px; line-height: 1.45; color: oklch(0.55 0.19 25);
+  margin: 0; padding: 8px 10px; border-radius: 8px;
+  background: oklch(0.55 0.19 25 / 0.08);
+}
+.auth-notice {
+  font-size: 12px; line-height: 1.5; color: var(--accent-3);
+  margin: 0; padding: 9px 11px; border-radius: 8px;
+  background: var(--accent-tint);
+}
+.auth-switch {
+  margin: 18px 0 0; text-align: center;
+  font-size: 12.5px; color: var(--fg-3);
+}
+.auth-switch button {
+  border: none; background: none; padding: 0; cursor: pointer;
+  font-size: 12.5px; font-weight: 600; color: var(--accent-2);
+}
+.auth-switch button:hover { text-decoration: underline; }
+
 /* Step indicator — numbered links, sentence case, Geist. State color only. */
 .stepnav { display: flex; align-items: center; gap: 6px; }
 .stepnav-item { display: inline-flex; align-items: center; gap: 6px; }

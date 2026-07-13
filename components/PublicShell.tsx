@@ -50,7 +50,6 @@ export default function PublicShell({
       <header className="pub-topbar">
         <a className="pub-wordmark" href={MARKETING_URL}>
           klovered
-          <span className="pub-free">free</span>
         </a>
         <div className="pub-nav-center">
           <StepNav current={step} />
