@@ -1726,3 +1726,154 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 /* Skeleton */
 .kf-skel-line { height: 11px; border-radius: 4px; background: linear-gradient(90deg, var(--bg-2), var(--divider), var(--bg-2)); background-size: 200% 100%; animation: kf-shine 1.4s ease-in-out infinite; }
 @keyframes kf-shine { to { background-position: -200% 0; } }
+
+/* ══════════════════════════════════════════════════════════════════════════
+ * Klovered Free — first-run onboarding overlay (OnboardingOverlay.tsx).
+ * Namespaced kf-ob-* so it can't collide with the tool screens. Reuses the
+ * shared design tokens, so it inherits light/dark and brand colors for free.
+ * ══════════════════════════════════════════════════════════════════════════ */
+.kf-ob-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in oklab, var(--fg) 46%, transparent);
+  backdrop-filter: blur(4px);
+  animation: kf-ob-fade 0.18s ease-out;
+}
+.kf-ob-card {
+  position: relative;
+  width: 100%;
+  max-width: 540px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: var(--shadow-3, 0 30px 70px -14px rgba(0, 0, 0, 0.30));
+  padding: 44px 48px 28px;
+  outline: none;
+  animation: kf-ob-rise 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.kf-ob-skip {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  background: none;
+  border: none;
+  padding: 5px 9px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fg-4);
+  cursor: pointer;
+  border-radius: 7px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.kf-ob-skip:hover { color: var(--fg-2); background: var(--bg-2); }
+
+/* Fixed-height stage keeps the card a constant size across slides, so paging
+ * never makes it jump or briefly collapse to empty. */
+.kf-ob-stage {
+  min-height: 208px;
+  display: grid;
+  align-content: center;
+}
+.kf-ob-body {
+  text-align: center;
+  animation: kf-ob-slide 0.28s ease-out;
+}
+.kf-ob-icon {
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 18px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-tint);
+  border: 1px solid var(--accent-tint2);
+}
+.kf-ob-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-3);
+  margin-bottom: 8px;
+}
+.kf-ob-title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+.kf-ob-text {
+  margin: 7px auto 0;
+  max-width: 40ch;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-3);
+}
+
+.kf-ob-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--divider);
+}
+.kf-ob-dots { display: flex; align-items: center; gap: 6px; }
+.kf-ob-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: width 0.2s ease, background 0.2s ease;
+}
+.kf-ob-dot.on { width: 18px; border-radius: 3px; background: var(--accent); }
+
+.kf-ob-btns { display: flex; align-items: center; gap: 8px; }
+.kf-ob-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 550;
+  padding: 8px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.kf-ob-btn.ghost {
+  background: transparent;
+  border-color: var(--border);
+  color: var(--fg-2);
+}
+.kf-ob-btn.ghost:hover { background: var(--bg-2); }
+.kf-ob-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.kf-ob-btn.primary:hover { background: var(--accent-2); }
+
+@keyframes kf-ob-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes kf-ob-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes kf-ob-slide { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 520px) {
+  .kf-ob-card { padding: 36px 24px 22px; max-width: 400px; }
+  .kf-ob-stage { min-height: 224px; }
+  .kf-ob-foot { flex-direction: column-reverse; align-items: stretch; gap: 14px; }
+  .kf-ob-btns { justify-content: flex-end; }
+  .kf-ob-btn.primary { flex: 1; }
+  .kf-ob-dots { justify-content: center; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kf-ob-backdrop, .kf-ob-card, .kf-ob-body { animation: none; }
+  .kf-ob-dot { transition: none; }
+}

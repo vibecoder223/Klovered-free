@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import StepNav from "./StepNav";
 import AuthButton from "./AuthButton";
+import OnboardingOverlay from "./OnboardingOverlay";
 import { useGuestSession } from "@/lib/use-session";
 
 // The public 3-step shell. No sidebar, no AppShell — a linear flow. It mounts
@@ -78,6 +79,7 @@ export default function PublicShell({
 
   return (
     <SessionCtx.Provider value={session}>
+      <OnboardingOverlay />
       <header className="pub-topbar">
         <a className="pub-wordmark" href={MARKETING_URL}>
           klovered
