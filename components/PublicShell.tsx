@@ -2,7 +2,6 @@
 import { createContext, useContext } from "react";
 import StepNav from "./StepNav";
 import AuthButton from "./AuthButton";
-import { Page } from "./ui";
 import { useGuestSession } from "@/lib/use-session";
 
 // The public 3-step shell. No sidebar, no AppShell — a linear flow. It mounts
@@ -24,13 +23,13 @@ const MARKETING_URL = process.env.NEXT_PUBLIC_MARKETING_URL ?? "/";
 
 function PreparingSession() {
   return (
-    <div className="section-card" style={{ padding: 16 }}>
-      <div className="pub-skel" aria-hidden="true">
-        <div className="pub-skel-line" style={{ width: "38%" }} />
-        <div className="pub-skel-line" style={{ width: "62%" }} />
-        <div className="pub-skel-line" style={{ width: "52%" }} />
+    <div className="kf-card" style={{ padding: 16 }}>
+      <div aria-hidden="true">
+        <div className="kf-skel-line" style={{ width: "38%" }} />
+        <div className="kf-skel-line" style={{ width: "62%", marginTop: 10 }} />
+        <div className="kf-skel-line" style={{ width: "52%", marginTop: 10 }} />
       </div>
-      <p className="pub-skel-note" style={{ marginTop: 16 }} role="status">
+      <p style={{ marginTop: 16, fontSize: 12.5, color: "var(--fg-4)" }} role="status">
         Preparing your private session.
       </p>
     </div>
@@ -57,12 +56,15 @@ export default function PublicShell({
           <StepNav current={step} />
         </div>
         <div className="pub-authslot">
+          <a className="pub-fullplatform" href={MARKETING_URL}>
+            Full platform
+          </a>
           <AuthButton />
         </div>
       </header>
 
       <main className="pub-main">
-        <Page>{session.ready ? children : <PreparingSession />}</Page>
+        {session.ready ? children : <div className="kf-page"><PreparingSession /></div>}
       </main>
 
       <footer className="pub-footer">

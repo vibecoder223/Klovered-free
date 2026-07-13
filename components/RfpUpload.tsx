@@ -2,19 +2,18 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { useSession } from "./PublicShell";
-import { PageHeader, SectionCard } from "./ui";
 
 // Real processing_status values, verified against lib/jobs.ts (deriveDocStatus)
 // and lib/agents.ts (setStatus) — NOT the brief's guessed stage names:
 //   uploaded -> queued -> extracting -> analyzing -> structured -> completed
 //   failures: failed / extraction_failed / generation_failed
-type Phase = { label: string; match: string[] };
+type Phase = { label: string; match: string[]; sub: string };
 const PHASES: Phase[] = [
-  { label: "Queued", match: ["uploaded", "queued"] },
-  { label: "Reading your RFP", match: ["extracting"] },
-  { label: "Extracting requirements", match: ["analyzing"] },
-  { label: "Drafting answers", match: ["structured"] },
-  { label: "Done", match: ["completed"] },
+  { label: "Queued", match: ["uploaded", "queued"], sub: "waiting" },
+  { label: "Reading your RFP", match: ["extracting"], sub: "parsing pages" },
+  { label: "Extracting requirements", match: ["analyzing"], sub: "structuring" },
+  { label: "Drafting answers", match: ["structured"], sub: "matching knowledge" },
+  { label: "Done", match: ["completed"], sub: "complete" },
 ];
 
 function isFailed(s: string) {
@@ -31,6 +30,7 @@ export default function RfpUpload() {
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [doc, setDoc] = useState<{ id: string; status: string; error?: string | null } | null>(null);
+  const [rfpFile, setRfpFile] = useState<{ name: string; size: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   // Resume: if this session already has a processed RFP, jump to answers.
@@ -70,6 +70,7 @@ export default function RfpUpload() {
       if (!f || !dealId || busy) return;
       setErr(null);
       setBusy(true);
+      setRfpFile({ name: f.name, size: f.size });
       try {
         const fd = new FormData();
         fd.append("file", f);
@@ -79,6 +80,7 @@ export default function RfpUpload() {
         if (!up.ok) {
           setErr(j.error || "Upload failed. Please try again.");
           setBusy(false);
+          setRfpFile(null);
           return;
         }
         const id = j.document?.id;
@@ -95,11 +97,13 @@ export default function RfpUpload() {
               : "Processing is unavailable right now."
           );
           setBusy(false);
+          setRfpFile(null);
           return;
         }
         setDoc({ id, status: "queued" });
       } catch {
         setErr("Something went wrong. Please try again.");
+        setRfpFile(null);
       }
       setBusy(false);
     },
@@ -108,54 +112,30 @@ export default function RfpUpload() {
 
   const failed = !!doc && isFailed(doc.status);
   const processing = !!doc && !failed;
+  const idx = doc ? phaseIndex(doc.status) : 0;
+  const pct = Math.max(6, Math.round((idx / (PHASES.length - 1)) * 100));
 
   return (
-    <>
-      <PageHeader
-        title="Upload RFP"
-        sub="Upload the questionnaire you need answered. Klovered extracts each requirement and drafts a grounded response."
-      />
+    <div className="kf-page">
+      <div className="kf-head">
+        <h1>{processing ? "Reading your RFP" : "Upload your RFP"}</h1>
+        <p>
+          {processing
+            ? "Every requirement is being extracted and structured, including the ones buried in appendices. This usually takes a couple of minutes."
+            : "Upload the questionnaire you need answered. Klovered extracts each requirement and drafts a grounded response from your knowledge."}
+        </p>
+      </div>
 
-      {processing && (
-        <SectionCard
-          title="Processing your RFP"
-          subtitle="This usually takes a couple of minutes. You can keep this tab open."
-        >
-          <div className="rfp-phases" role="status" aria-live="polite">
-            {PHASES.map((p, i) => {
-              const idx = phaseIndex(doc!.status);
-              const state = i < idx ? "done" : i === idx ? "active" : "upcoming";
-              return (
-                <div key={p.label} className={`rfp-phase is-${state}`}>
-                  <span className={`rfp-dot ${state}`} aria-hidden="true" />
-                  <span className="rfp-phase-label">{p.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-      )}
-
-      {failed && (
-        <SectionCard title="Processing did not finish">
-          <div className="rfp-error" role="alert" style={{ margin: 16 }}>
-            {doc?.error || "The RFP could not be processed. Please try a different file."}
-          </div>
-        </SectionCard>
-      )}
-
+      {/* Idle: dropzone */}
       {!doc && (
         <>
           <div
-            className={`rfp-drop${dragging ? " dragging" : ""}`}
+            className={`kf-drop${dragging ? " dragging" : ""}`}
             role="button"
             tabIndex={0}
             aria-disabled={busy}
             aria-label="Upload an RFP file"
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragging(true);
-            }}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
             onDragLeave={() => setDragging(false)}
             onDrop={(e) => {
               e.preventDefault();
@@ -177,25 +157,116 @@ export default function RfpUpload() {
               className="hidden"
               onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
             />
-            <div className="rfp-drop-title">{busy ? "Uploading your RFP" : "Drop your RFP here"}</div>
-            <div className="rfp-drop-sub">
-              {busy ? (
-                "One moment."
-              ) : (
-                <>
-                  or <span style={{ color: "var(--accent)", textDecoration: "underline" }}>browse</span> to choose a file
-                </>
-              )}
+            <div className="kf-up"><UploadIcon /></div>
+            <div className="kf-t">{busy ? "Uploading your RFP" : "Drop your RFP here"}</div>
+            <div className="kf-s">
+              {busy ? "One moment." : <>or <b>browse</b> to choose a file</>}
             </div>
-            <div className="rfp-drop-hint">pdf or docx, up to 50 mb, one per session</div>
+            <div className="kf-fmt">pdf or docx, up to 50 MB, one per session</div>
           </div>
           {err && (
-            <div className="rfp-error" role="alert">
-              {err}
+            <div className="kf-gap-note" role="alert" style={{ marginTop: 14 }}>
+              <WarnIcon />
+              <span>{err}</span>
             </div>
           )}
         </>
       )}
-    </>
+
+      {/* Processing: file + meter + phase list */}
+      {processing && (
+        <div className="kf-card">
+          <div className="kf-rfp-file">
+            <span className="kf-fic"><FileIcon color="var(--accent-3)" /></span>
+            <div className="kf-fn" style={{ flex: 1, minWidth: 0 }}>
+              <div className="kf-nm">{rfpFile?.name ?? "Your RFP"}</div>
+              {rfpFile && <div className="kf-meta">{formatSize(rfpFile.size)}</div>}
+            </div>
+            <span className="kf-badge warn"><span className="kf-d" />Extracting</span>
+          </div>
+          <div className="kf-meter" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Extraction progress">
+            <div className="kf-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="kf-phase-list" role="status" aria-live="polite">
+            {PHASES.map((p, i) => {
+              const state = i < idx ? "done" : i === idx ? "run" : "";
+              return (
+                <div key={p.label} className={`kf-phase ${state}`}>
+                  <span className="kf-ic">
+                    {state === "done" ? <CheckIcon /> : state === "run" ? <span className="kf-spin" /> : null}
+                  </span>
+                  {p.label}
+                  <span className="kf-sub">{i < idx ? "done" : i === idx ? p.sub : "waiting"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Failed */}
+      {failed && (
+        <div className="kf-card">
+          <div className="kf-gap-note" role="alert" style={{ margin: 16, marginTop: 16 }}>
+            <WarnIcon />
+            <span>{doc?.error || "The RFP could not be processed. Please try a different file."}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      {processing && (
+        <div className="kf-foot">
+          <span className="kf-hint">Safe to leave this tab open in the background. We will keep going.</span>
+          <button className="btn btn-primary btn-lg" disabled>Continue to answers</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── helpers ──────────────────────────────────────────────────────────────── */
+
+function formatSize(bytes: number): string {
+  if (!bytes) return "";
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+/* ── icons ────────────────────────────────────────────────────────────────── */
+
+function UploadIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 16V4M12 4L7 9M12 4l5 5" stroke="var(--accent-2)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 17v2a1 1 0 001 1h14a1 1 0 001-1v-2" stroke="var(--accent-2)" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function FileIcon({ color = "currentColor" }: { color?: string }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M14 3H7a1 1 0 00-1 1v16a1 1 0 001 1h10a1 1 0 001-1V8l-4-5z" stroke={color} strokeWidth="1.7" />
+      <path d="M14 3v5h4" stroke={color} strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 12l4 4 10-10" stroke="var(--accent-3)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function WarnIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flex: "none", marginTop: 1 }} aria-hidden="true">
+      <path d="M12 3L2.5 20h19L12 3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <circle cx="12" cy="17.2" r="1" fill="currentColor" />
+    </svg>
   );
 }
