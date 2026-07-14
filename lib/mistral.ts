@@ -258,11 +258,23 @@ async function sendWithRetries(body: any, model: string): Promise<{ raw: string;
     // Fall back to the reasoning field if a reasoning model emitted its answer
     // there with an empty content (happens when reasoning consumes the budget).
     const raw = (msg.content && msg.content.trim()) ? msg.content : (msg.reasoning ?? "");
+    const inTok = j.usage?.prompt_tokens ?? 0;
+    const outTok = j.usage?.completion_tokens ?? 0;
+    // Opt-in call metrics for load testing (inert unless LLM_METRICS_FILE set).
+    if (process.env.LLM_METRICS_FILE) {
+      try {
+        const fs = await import("node:fs");
+        fs.appendFileSync(
+          process.env.LLM_METRICS_FILE,
+          JSON.stringify({ t: Date.now(), model, in: inTok, out: outTok }) + "\n"
+        );
+      } catch {}
+    }
     return {
       raw,
       usage: {
-        input_tokens:  j.usage?.prompt_tokens     ?? 0,
-        output_tokens: j.usage?.completion_tokens ?? 0,
+        input_tokens:  inTok,
+        output_tokens: outTok,
       },
     };
   }
