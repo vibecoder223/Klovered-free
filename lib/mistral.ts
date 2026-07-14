@@ -79,8 +79,13 @@ function gateConfigFor(model: string): ModelGateConfig {
     return {
       rpm: Number(process.env.LLM_RPM_FAST ?? 100),
       tpm: Number(process.env.LLM_TPM_FAST ?? 100_000),
-      maxConcurrency: Number(process.env.LLM_MAX_CONCURRENCY_FAST ?? 8),
-      minIntervalMs: Number(process.env.LLM_MIN_INTERVAL_MS_FAST ?? 600),
+      maxConcurrency: Number(process.env.LLM_MAX_CONCURRENCY_FAST ?? 12),
+      // Anti-burst spacing only — the rolling RPM/TPM windows above are the
+      // real caps. 600ms here made spacing the bottleneck (it serialized every
+      // fast-model call to ≤100/min even when the minute budget had room);
+      // 150ms just breaks up thundering herds, and the in-call 429 retry
+      // covers whatever slips through.
+      minIntervalMs: Number(process.env.LLM_MIN_INTERVAL_MS_FAST ?? 150),
     };
   }
   // Default bucket covers MODEL and any model not explicitly MODEL_FAST.
@@ -136,10 +141,15 @@ function windowTokens(s: GateState, now: number): number {
 
 // Block until BOTH the rolling 60s request budget (RPM) and token budget (TPM)
 // have room for this call on THIS model's gate, then reserve a slot in each.
-async function reserveSlot(model: string, est: number): Promise<void> {
+// Returns the token-window entry so the caller can reconcile the reservation
+// with ACTUAL usage once the response arrives: the estimate reserves the full
+// max_tokens, but real completions are typically far smaller, and without
+// reconciliation the window "spends" several times the tokens the provider
+// actually counted — throttling concurrent documents minutes early.
+async function reserveSlot(model: string, est: number): Promise<{ t: number; tokens: number } | null> {
   const cfg = gateConfigFor(model);
   const s = stateFor(model);
-  if (!cfg.rpm && !cfg.tpm && !cfg.minIntervalMs) return;
+  if (!cfg.rpm && !cfg.tpm && !cfg.minIntervalMs) return null;
   for (;;) {
     const now = Date.now();
     s.requestWindow = s.requestWindow.filter((t) => now - t < 60_000);
@@ -150,8 +160,12 @@ async function reserveSlot(model: string, est: number): Promise<void> {
     if (reqOk && tokOk && gapOk) {
       s.requestWindow.push(now);
       s.lastRequestAt = now;
-      if (cfg.tpm) s.tokenWindow.push({ t: now, tokens: est });
-      return;
+      if (cfg.tpm) {
+        const entry = { t: now, tokens: est };
+        s.tokenWindow.push(entry);
+        return entry;
+      }
+      return null;
     }
     if (reqOk && tokOk && !gapOk) {
       // Only the spacing gate is binding — short sleep until the gap elapses.
@@ -170,6 +184,26 @@ async function reserveSlot(model: string, est: number): Promise<void> {
 // ~4 chars/token; count the prompt we send plus the output we've reserved.
 function estimateTokens(system: string, user: string, maxTokens: number): number {
   return Math.ceil((system.length + user.length) / 4) + maxTokens;
+}
+
+/**
+ * Read-only saturation probe for the fast lane. True when MODEL_FAST's rolling
+ * RPM or TPM window has no room for a call of ~`estTokens` right now — i.e. the
+ * call would sit in reserveSlot waiting for the minute to roll over. Callers
+ * use this to spill work to MODEL (huge TPM budget, mostly idle outside
+ * extraction) instead of queueing behind the fast lane under concurrent load.
+ * Racy by design (no reservation happens here): a wrong answer just means one
+ * call lands in the slower lane — both lanes still enforce their own gates.
+ */
+export function fastLaneSaturated(estTokens: number): boolean {
+  const cfg = gateConfigFor(MODEL_FAST);
+  const s = stateFor(MODEL_FAST);
+  const now = Date.now();
+  s.requestWindow = s.requestWindow.filter((t) => now - t < 60_000);
+  const rpmFull = Boolean(cfg.rpm) && s.requestWindow.length >= cfg.rpm;
+  const tpmFull =
+    Boolean(cfg.tpm) && estTokens < cfg.tpm && windowTokens(s, now) + estTokens > cfg.tpm;
+  return rpmFull || tpmFull;
 }
 
 async function call(opts: {
@@ -203,8 +237,15 @@ async function call(opts: {
   // (including in-call 429 retries) so retries don't re-burst.
   await acquireConcurrency(model);
   try {
-    await reserveSlot(model, estimateTokens(opts.system, opts.user, maxTokens));
-    return await sendWithRetries(body, model);
+    const reservation = await reserveSlot(model, estimateTokens(opts.system, opts.user, maxTokens));
+    const result = await sendWithRetries(body, model);
+    // Reconcile the token reservation with what the provider actually counted
+    // (mutating the entry in place updates the shared rolling window). Only
+    // when usage came back — on a missing usage block keep the conservative
+    // estimate rather than treating the call as free.
+    const actual = result.usage.input_tokens + result.usage.output_tokens;
+    if (reservation && actual > 0) reservation.tokens = actual;
+    return result;
   } finally {
     releaseConcurrency(model);
   }

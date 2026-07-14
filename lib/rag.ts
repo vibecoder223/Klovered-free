@@ -5,7 +5,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { callMistralJson, callMistralText, MODEL_FAST, hasLlmKey } from "./mistral";
+import { callMistralJson, callMistralText, MODEL, MODEL_FAST, fastLaneSaturated, hasLlmKey } from "./mistral";
 import { embedTexts, hasEmbeddings } from "./embeddings";
 import { isNoSource, retrieveForQuery, retrieveForQueries, type Candidate } from "./retrieval";
 import { suggestAnswers, suggestAnswersByEmbeddings, recordReuse, LIBRARY_REUSE_MIN } from "./answer-library";
@@ -46,6 +46,20 @@ Return ONLY a JSON array, one item per question, no fences:
 - 0.0: not grounded.
 
 Output a single decimal number, nothing else.`,
+  // Batched variant of the scorer: several independent answers in one call.
+  // Each <item> carries ONLY its own cited chunks, so the judgment per answer
+  // is identical to the single-answer scorer — batching amortizes the call
+  // overhead (and the per-call rate-gate spacing), not the evidence scope.
+  confidence_batch_system_v1: `You are scoring how well each answer is grounded in its OWN cited source chunks. Score each item independently — never let one item's sources influence another's score.
+
+Per item, score 0.0-1.0:
+- 1.0: every claim is directly supported by that item's cited chunks.
+- 0.7: mostly supported; minor unsupported phrasing.
+- 0.4: partially supported; weak source coverage on some claims.
+- 0.0: not grounded.
+
+Return ONLY a JSON array, one entry per item, no fences:
+[{"q": <item number>, "score": <decimal>}]`,
 };
 
 export type GenerationUsage = { input_tokens: number; output_tokens: number };
@@ -269,6 +283,13 @@ const BatchAnswerSchema = z.array(
   })
 );
 
+const BatchScoreSchema = z.array(
+  z.object({
+    q: z.coerce.number().int().min(1),
+    score: z.coerce.number().min(0).max(1),
+  })
+);
+
 /** Max unique chunks sent in one batched call (~400 tokens each). */
 const BATCH_SOURCE_CAP = 14;
 /** Each question's top-K chunks are guaranteed a slot before global fill. */
@@ -448,12 +469,15 @@ export async function generateBatchAnswers(
             : `${user}\n\n[Previous attempt failed: ${lastErr}. Return ONLY the JSON array described in the system prompt.]`,
         maxTokens,
         mode: "text",
-        // Batched generation is the many-small-calls workload — route to the
-        // fast model, whose rate limit (50 RPM) comfortably covers a whole
-        // document's worth of sub-batches. The extraction model (MODEL,
-        // mistral-large-latest) is capped at 4 RPM and reserved for the few
-        // big whole-document calls where its far larger TPM budget matters.
-        model: MODEL_FAST,
+        // Batched generation defaults to the fast model. Under concurrent
+        // documents the fast lane's TPM window saturates (it's the real
+        // Mistral cap) — spill this sub-batch to MODEL (mistral-large), whose
+        // 400k-TPM budget sits idle once extraction finished. Accuracy is
+        // equal-or-better (it's the premium model); the spill only engages
+        // when the fast lane would otherwise queue into the next minute.
+        model: fastLaneSaturated(Math.ceil(user.length / 4) + maxTokens)
+          ? MODEL
+          : MODEL_FAST,
       });
       totalIn += usage.input_tokens;
       totalOut += usage.output_tokens;
@@ -470,6 +494,24 @@ export async function generateBatchAnswers(
 
   const validIds = new Set(sharedSources.map((c) => c.chunk_id));
 
+  // Two-phase persist. Phase 1 (sync, no I/O): classify every question —
+  // fallback / NO_SOURCE / answered — and compute the heuristic confidence.
+  // Phase 2: ONE batched scorer call refines confidence for every grounded
+  // answer at once, then all upserts + fallbacks run concurrently. The old
+  // per-question loop serialized ~5 scorer calls + 5 DB round-trips per
+  // sub-batch behind the process-wide rate-gate spacing.
+  type PreparedAnswer = {
+    item: (typeof live)[number];
+    rawAnswer: string;
+    clean: string;
+    validCited: ReturnType<typeof extractCitations>;
+    grounded: boolean;
+    confidence: number;
+  };
+  const fallbackItems: Array<(typeof live)[number]> = [];
+  const noSourceItems: Array<(typeof live)[number]> = [];
+  const prepared: PreparedAnswer[] = [];
+
   for (let i = 0; i < live.length; i++) {
     const item = live[i];
     const rawAnswer = answers?.get(i + 1)?.trim();
@@ -477,20 +519,99 @@ export async function generateBatchAnswers(
     if (!rawAnswer) {
       // Missing from the batch response — fall back to the proven per-question
       // path rather than leaving a hole. Costs one extra call for that question.
-      const usage = await generateAndPersistAnswer(supabase, {
-        question_id: item.question.question_id,
-        question_text: item.question.question_text,
-        org_id: args.org_id,
-        org_name: args.org_name,
-        tone: args.tone,
-      });
-      totalIn += usage.input_tokens;
-      totalOut += usage.output_tokens;
+      fallbackItems.push(item);
+      continue;
+    }
+    if (/^\s*"?NO_SOURCE/i.test(rawAnswer)) {
+      noSourceItems.push(item);
       continue;
     }
 
-    if (/^\s*"?NO_SOURCE/i.test(rawAnswer)) {
-      await upsertResponse(supabase, {
+    // Citations index into the SHARED source list — extract against it.
+    // Grounding truth = citations that resolve to a real shared chunk. Free-written
+    // prose (no markers) or citation-spam ([c:1,2,3…] to invalid ids) resolves to
+    // zero — ungrounded, and never surfaced as a draft (see generateAndPersistAnswer).
+    const cited = extractCitations(rawAnswer, sharedSources);
+    const validCited = cited.filter((c) => validIds.has(c.chunk_id));
+    const grounded = validCited.length > 0;
+    prepared.push({
+      item,
+      rawAnswer,
+      clean: stripMarkers(rawAnswer),
+      validCited,
+      grounded,
+      confidence: !grounded ? 0 : validCited.length >= 2 ? 0.7 : 0.5,
+    });
+  }
+
+  // Citation-count is a weak signal — a single valid citation doesn't mean
+  // every sentence in the answer is actually supported by it (embellishment,
+  // cross-chunk contamination, over-generalization all pass the count check).
+  // The independent scorer re-reads each answer against ONLY its cited chunks
+  // and catches unsupported sentences the citation check can't see. Batched:
+  // one call scores the whole sub-batch; each <item> carries only its own
+  // cited chunks, so per-answer judgment is identical to the single scorer.
+  const scorable = prepared.filter((p) => p.grounded);
+  if (scorable.length > 0 && process.env.RAG_USE_CONFIDENCE_LLM === "1") {
+    try {
+      const itemsBlock = scorable
+        .map((p, idx) => {
+          const citedChunks = p.validCited
+            .map((c) => sharedSources.find((s) => s.chunk_id === c.chunk_id))
+            .filter((c): c is Candidate => !!c);
+          return `<item n="${idx + 1}">\n<answer>\n${p.rawAnswer}\n</answer>\n<sources>\n${citedChunks.map((c) => `<chunk id="${c.chunk_id}">${c.text}</chunk>`).join("\n")}\n</sources>\n</item>`;
+        })
+        .join("\n\n");
+      const confMaxTokens = 16 * scorable.length + 32;
+      const { data, usage } = await callMistralJson<unknown>({
+        system: PROMPTS.confidence_batch_system_v1,
+        user: itemsBlock,
+        maxTokens: confMaxTokens,
+        mode: "text",
+        // Same spill rule as generation: don't queue behind a saturated fast
+        // lane when the large model's budget is idle.
+        model: fastLaneSaturated(Math.ceil(itemsBlock.length / 4) + confMaxTokens)
+          ? MODEL
+          : MODEL_FAST,
+      });
+      totalIn += usage.input_tokens;
+      totalOut += usage.output_tokens;
+      const scores = BatchScoreSchema.safeParse(data);
+      if (scores.success) {
+        for (const s of scores.data) {
+          const p = scorable[s.q - 1];
+          if (p) p.confidence = Math.max(0, Math.min(1, s.score));
+        }
+      }
+      // Malformed scorer output → keep heuristic confidence (same as before).
+    } catch {
+      // Leave heuristic confidence if scorer fails.
+    }
+  }
+
+  // Persist everything concurrently — rows are independent. A fallback failure
+  // still rejects the whole batch (same contract as the old sequential loop).
+  const work: Promise<unknown>[] = [];
+
+  for (const item of fallbackItems) {
+    work.push(
+      (async () => {
+        const usage = await generateAndPersistAnswer(supabase, {
+          question_id: item.question.question_id,
+          question_text: item.question.question_text,
+          org_id: args.org_id,
+          org_name: args.org_name,
+          tone: args.tone,
+        });
+        totalIn += usage.input_tokens;
+        totalOut += usage.output_tokens;
+      })()
+    );
+  }
+
+  for (const item of noSourceItems) {
+    work.push(
+      upsertResponse(supabase, {
         question_id: item.question.question_id,
         answer_text_with_markers:
           "NO_SOURCE: The knowledge base does not contain content sufficient to answer this requirement.",
@@ -501,62 +622,31 @@ export async function generateBatchAnswers(
         status: "requires_review",
         generated_by: "ai",
         citations: [],
-      });
-      continue;
-    }
-
-    // Citations index into the SHARED source list — extract against it.
-    const cited = extractCitations(rawAnswer, sharedSources);
-    // Grounding truth = citations that resolve to a real shared chunk. Free-written
-    // prose (no markers) or citation-spam ([c:1,2,3…] to invalid ids) resolves to
-    // zero — ungrounded, and never surfaced as a draft (see generateAndPersistAnswer).
-    const validCited = cited.filter((c) => validIds.has(c.chunk_id));
-    const clean = stripMarkers(rawAnswer);
-    const grounded = validCited.length > 0;
-    let confidence = !grounded ? 0 : validCited.length >= 2 ? 0.7 : 0.5;
-
-    // Citation-count is a weak signal — a single valid citation doesn't mean
-    // every sentence in the answer is actually supported by it (embellishment,
-    // cross-chunk contamination, over-generalization all pass the count check).
-    // The independent scorer re-reads the answer against ONLY its cited chunks
-    // and catches unsupported sentences the citation check can't see.
-    if (grounded && process.env.RAG_USE_CONFIDENCE_LLM === "1") {
-      try {
-        const citedChunks = validCited
-          .map((c) => sharedSources.find((s) => s.chunk_id === c.chunk_id))
-          .filter((c): c is Candidate => !!c);
-        const { text, usage } = await callMistralText({
-          system: PROMPTS.confidence_system_v1,
-          user: `<answer>\n${rawAnswer}\n</answer>\n\n<sources>\n${citedChunks.map((c) => `<chunk id="${c.chunk_id}">${c.text}</chunk>`).join("\n")}\n</sources>`,
-          maxTokens: 16,
-          model: MODEL_FAST,
-        });
-        totalIn += usage.input_tokens;
-        totalOut += usage.output_tokens;
-        const m = text.match(/[01](?:\.\d+)?/);
-        if (m) confidence = Math.max(0, Math.min(1, parseFloat(m[0])));
-      } catch {
-        // Leave heuristic confidence if scorer fails.
-      }
-    }
-
-    const gap_flag: "ok" | "partial" | "no_source" =
-      !grounded ? "no_source" : confidence >= 0.7 ? "ok" : "partial";
-    const status: "draft" | "requires_review" =
-      confidence >= 0.7 && gap_flag === "ok" ? "draft" : "requires_review";
-
-    await upsertResponse(supabase, {
-      question_id: item.question.question_id,
-      answer_text_with_markers: rawAnswer,
-      answer_text_clean: grounded ? clean : "",
-      tone: args.tone || "technical",
-      confidence,
-      gap_flag,
-      status,
-      generated_by: "ai",
-      citations: validCited,
-    });
+      })
+    );
   }
+
+  for (const p of prepared) {
+    const gap_flag: "ok" | "partial" | "no_source" =
+      !p.grounded ? "no_source" : p.confidence >= 0.7 ? "ok" : "partial";
+    const status: "draft" | "requires_review" =
+      p.confidence >= 0.7 && gap_flag === "ok" ? "draft" : "requires_review";
+    work.push(
+      upsertResponse(supabase, {
+        question_id: p.item.question.question_id,
+        answer_text_with_markers: p.rawAnswer,
+        answer_text_clean: p.grounded ? p.clean : "",
+        tone: args.tone || "technical",
+        confidence: p.confidence,
+        gap_flag,
+        status,
+        generated_by: "ai",
+        citations: p.validCited,
+      })
+    );
+  }
+
+  await Promise.all(work);
 
   return { input_tokens: totalIn, output_tokens: totalOut };
 }
