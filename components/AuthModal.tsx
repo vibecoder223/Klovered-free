@@ -20,8 +20,14 @@ import { createClient } from "@/utils/supabase/client";
 //        account's own data.
 type Mode = "signup" | "signin";
 
-export default function AuthModal({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<Mode>("signup");
+export default function AuthModal({
+  onClose,
+  initialMode = "signup",
+}: {
+  onClose: () => void;
+  initialMode?: Mode;
+}) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
