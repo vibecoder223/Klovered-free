@@ -1,7 +1,13 @@
 name: CI
 
-# NOTE: this repo's default branch is `master`, not `main` — verify with
-# `git remote show origin` before "fixing" this if it looks wrong later.
+# Default branch is `master` (not `main`) — verified with `git remote show origin`.
+#
+# CD is handled by Vercel's native GitHub integration (the Vercel GitHub App),
+# NOT by this workflow: every push to `master` triggers a Vercel production
+# deploy, and every PR gets a preview deploy, automatically. This workflow is
+# purely the verification gate — lint + typecheck-via-build — so a red build is
+# caught here in parallel with Vercel's own build. There is no `vercel deploy`
+# step and no VERCEL_* secrets to manage.
 on:
   push:
     branches: [master]
@@ -14,7 +20,7 @@ concurrency:
 
 jobs:
   frontend:
-    name: Frontend — lint, build
+    name: Lint & build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,32 +37,10 @@ jobs:
         run: npm run lint
 
       - name: Build
-        # `next build` type-checks as part of compilation.
+        # `next build` type-checks as part of compilation. Placeholder Supabase
+        # vars satisfy the lazy config guards; no real secrets needed to compile
+        # (the app reads live values from Vercel env at runtime).
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: placeholder-anon-key
-
-  deploy:
-    name: Deploy to Vercel
-    # Single Next.js app — all API logic runs in-app via Next route handlers
-    # (app/api/*), same as the main Propello/Klovered system, so there's nothing
-    # else to deploy.
-    needs: [frontend]
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push' && vars.DEPLOY_ENABLED == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-      - name: Deploy (Vercel)
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          npm i -g vercel@latest
-          vercel pull --yes --environment=production --token="$VERCEL_TOKEN"
-          vercel build --prod --token="$VERCEL_TOKEN"
-          vercel deploy --prebuilt --prod --token="$VERCEL_TOKEN"

@@ -26,10 +26,8 @@ async function emptyBucketFolder(
   return paths.length;
 }
 
-export async function POST(req: Request) {
-  if (req.headers.get("x-cron-secret") !== process.env.CRON_SECRET)
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
+// Shared body — authorization is enforced by the POST/GET wrappers below.
+async function runCleanup(): Promise<NextResponse> {
   const admin = createAdminClient();
   const cutoff = new Date(Date.now() - WINDOW_MS).toISOString();
 
@@ -97,4 +95,28 @@ export async function POST(req: Request) {
     filesRemoved,
     ...(errors.length ? { errors } : {}),
   });
+}
+
+// Two authorized entry points, same body:
+//   POST — pg_cron / GitHub Action / manual curl: shared secret in x-cron-secret.
+//   GET  — Vercel Cron: the platform sends `Authorization: Bearer $CRON_SECRET`
+//          automatically for scheduled invocations (see vercel.json `crons`).
+// A blank CRON_SECRET disables both — never run an unauthenticated purge.
+function authorized(req: Request): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  return (
+    req.headers.get("x-cron-secret") === secret ||
+    req.headers.get("authorization") === `Bearer ${secret}`
+  );
+}
+
+export async function POST(req: Request) {
+  if (!authorized(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return runCleanup();
+}
+
+export async function GET(req: Request) {
+  if (!authorized(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return runCleanup();
 }
