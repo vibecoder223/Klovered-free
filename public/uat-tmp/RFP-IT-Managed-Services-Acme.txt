@@ -1,0 +1,12 @@
+Request for Proposal - IT Managed Services
+
+Reference: ACME-2026-IT-101
+Issued by: Acme Logistics
+Deadline: 1 October 2026
+
+Requirements:
+1. Describe your help desk support model and coverage hours.
+2. What are your uptime guarantees and SLA credits for downtime?
+3. Describe your approach to endpoint security and patch management.
+4. How do you handle onboarding and offboarding of staff accounts?
+5. Provide a three-year cost breakdown.

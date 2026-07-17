@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { api } from "@/lib/api";
 import AuthModal from "./AuthModal";
 
 // Header auth control.
@@ -40,16 +40,21 @@ export default function AuthButton() {
   }, []);
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setEmail(session?.user?.email ?? null);
-      setAnon(session?.user?.is_anonymous ?? true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setEmail(session?.user?.email ?? null);
-      setAnon(session?.user?.is_anonymous ?? true);
-    });
-    return () => sub.subscription.unsubscribe();
+    let cancelled = false;
+    api
+      .me()
+      .then((s) => {
+        if (cancelled) return;
+        setEmail(s.email ?? null);
+        setAnon(s.is_anonymous);
+      })
+      .catch(() => {
+        // No session yet (bootstrap in flight) — treat as anonymous.
+        if (!cancelled) setAnon(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Close the account menu on outside click / Escape.
@@ -70,8 +75,12 @@ export default function AuthButton() {
   async function signOut() {
     if (signingOut) return;
     setSigningOut(true);
-    const supabase = createClient();
-    await supabase.auth.signOut();
+    try {
+      await api.logout();
+    } catch {
+      // Even if the call fails, reload — the cookie is httpOnly and the next
+      // bootstrap will re-establish a guest session either way.
+    }
     // Reload so useGuestSession provisions a fresh anonymous session on the
     // same page — the visitor keeps using the tool, just no longer signed in.
     window.location.reload();

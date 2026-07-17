@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { api, ApiError } from "@/lib/api";
 
 // Auth modal for upgrading the anonymous guest to a permanent account. Two
-// paths, both of which keep the visitor on the current page:
+// paths, both of which keep the visitor on the current page. All auth goes to
+// the Python backend, which sets one shared session cookie on the domain — so
+// this same modal (and the same account) work identically on the marketing
+// site and here in the tool.
 //
-//  • Google  — linkIdentity() attaches a Google identity to the SAME auth.users
-//    row, so the org + all uploaded data carry over untouched. This leg does a
-//    full OAuth round-trip; we send `next` = the current path so the callback
-//    returns here rather than to a fixed page.
+//  • Google  — full-page redirect to /api/auth/google/start; the backend
+//    callback upgrades the current guest in place (same org + data), sets the
+//    cookie, and redirects back to `next` (the current path) already signed in.
 //  • Email / password
-//      – Sign up: updateUser({ email, password }) converts the current anon
-//        user in place (same id → same org → data preserved). If the project
-//        requires email confirmation, Supabase sends a verification mail and the
-//        upgrade completes when the visitor clicks it.
-//      – Sign in: signInWithPassword() logs into an EXISTING account. That
-//        replaces the current guest session, so we reload the page to load that
-//        account's own data.
+//      – Sign up: POST /api/auth/signup. Because the guest's session cookie is
+//        sent, the backend converts that guest in place (same id → same org →
+//        data preserved). We reload so the page picks up the account session.
+//      – Sign in: POST /api/auth/login logs into an EXISTING account, replacing
+//        the current guest session; we reload to load that account's own data.
 type Mode = "signup" | "signin";
 
 export default function AuthModal({
@@ -49,21 +49,13 @@ export default function AuthModal({
       ? window.location.pathname + window.location.search
       : "/";
 
-  async function googleSignIn() {
+  function googleSignIn() {
     if (busy) return;
     setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const next = encodeURIComponent(currentPath);
-    const { error } = await supabase.auth.linkIdentity({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/api/auth/callback?next=${next}` },
-    });
-    if (error) {
-      setError(error.message);
-      setBusy(false);
-    }
-    // On success the browser is redirected to Google; nothing more to do here.
+    // Full-page redirect; the backend callback sets the cookie and returns to
+    // `next`. No further work here — the browser leaves this page.
+    window.location.href = api.googleStartUrl(currentPath);
   }
 
   async function emailSubmit(e: React.FormEvent) {
@@ -82,44 +74,20 @@ export default function AuthModal({
     }
 
     setBusy(true);
-    const supabase = createClient();
-
-    if (mode === "signup") {
-      // Convert the anonymous guest in place — keeps the same org + data.
-      const { data, error } = await supabase.auth.updateUser({
-        email: email.trim(),
-        password,
-      });
-      if (error) {
-        setError(error.message);
-        setBusy(false);
-        return;
-      }
-      // If the project requires email confirmation, the address lands in
-      // new_email until the link is clicked; otherwise it's live immediately.
-      const confirmed = data.user?.email === email.trim() && !data.user?.new_email;
-      if (confirmed) {
-        window.location.reload();
+    try {
+      if (mode === "signup") {
+        // The guest's session cookie rides along, so the backend upgrades that
+        // guest in place — same org + data — and sets the account cookie.
+        await api.signup(email.trim(), password);
       } else {
-        setNotice(
-          `Almost there — we sent a confirmation link to ${email.trim()}. Click it to finish securing your account. Your work stays here in the meantime.`
-        );
-        setBusy(false);
+        // Sign in to an existing account — replaces the current guest session.
+        await api.login(email.trim(), password);
       }
-      return;
-    }
-
-    // Sign in to an existing account — replaces the current guest session.
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    if (error) {
-      setError(error.message);
+      window.location.reload();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong. Try again.");
       setBusy(false);
-      return;
     }
-    window.location.reload();
   }
 
   return (

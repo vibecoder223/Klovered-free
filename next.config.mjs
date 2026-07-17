@@ -1,10 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Keep these out of the server bundle. pdfjs-dist in particular breaks when
-  // bundled: it can't resolve its worker module ("Setting up fake worker
-  // failed: Cannot find module .../pdf.worker.mjs"), which failed every PDF
-  // upload. Externalized, Node loads them from node_modules and they work.
-  serverExternalPackages: ["pdf-parse", "pdfkit", "pdfjs-dist", "mammoth", "docx", "docxtemplater"],
+  // Self-contained server bundle (.next/standalone) for Docker on the Droplet.
+  output: "standalone",
+  // The tool is served at klovered.com/app (Caddy path-routes /app -> this
+  // container). basePath makes Next emit all page routes and asset URLs under
+  // /app so they don't collide with the marketing site at the domain root.
+  // Client fetches to "/api/*" stay origin-relative (NOT under /app) and Caddy
+  // routes them to the Python backend.
+  basePath: "/app",
 };
 
 export default nextConfig;

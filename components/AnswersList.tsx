@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useSession } from "./PublicShell";
 import AuthButton from "./AuthButton";
+import { api } from "@/lib/api";
 
 type Q = {
   id: string;
@@ -39,33 +41,52 @@ export default function AnswersList() {
 
   useEffect(() => {
     if (!ready || !dealId) return;
-    fetch(`/api/answers?deal_id=${dealId}`)
-      .then((r) => r.json())
-      .then((d) => setQs(d.questions ?? []))
+    api
+      .dealAnswers(dealId)
+      .then((d: { questions?: Q[] }) => setQs(d.questions ?? []))
       .catch(() => setQs([]));
   }, [ready, dealId]);
 
-  async function exportDocx() {
-    if (exporting) return;
+  // Client-side export (v1): build a Markdown document from the loaded answers
+  // and download it — no server round-trip. Full .docx export is a fast follow.
+  function exportDocx() {
+    if (exporting || !qs || qs.length === 0) return;
     setExporting(true);
     setExportErr(null);
     try {
-      const r = await fetch("/api/exports/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deal_id: dealId, format: "docx", citation_style: "inline" }),
+      const lines: string[] = ["# Klovered — drafted answers", ""];
+      qs.forEach((q, i) => {
+        lines.push(`## ${i + 1}. ${q.question_text}`);
+        const r = q.response;
+        if (!r) {
+          lines.push("", "_Draft pending._", "");
+          return;
+        }
+        lines.push("", r.answer_text || "");
+        if (r.gap_flag === "no_source") {
+          lines.push("", "> Gap: no source found — add this to your knowledge base or write it yourself.");
+        } else {
+          if (r.citations?.length) {
+            const srcs = r.citations
+              .map((c) => (c.filename ?? "source") + (c.page_start != null ? ` p.${c.page_start}` : ""))
+              .join("; ");
+            lines.push("", `Sources: ${srcs}`);
+          }
+          if (r.confidence != null) lines.push(`Confidence: ${r.confidence.toFixed(2)}`);
+        }
+        lines.push("");
       });
-      const j = await r.json().catch(() => ({}));
-      // The generate route returns { exportId, format }; download is addressed
-      // by exportId at /api/exports/[id]/download.
-      if (!r.ok || !j.exportId) {
-        setExportErr(j.error || "Export failed. Please try again.");
-        setExporting(false);
-        return;
-      }
-      window.location.href = `/api/exports/${j.exportId}/download`;
+      const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "klovered-answers.md";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch {
-      setExportErr("Export failed. Please try again.");
+      setExportErr("Could not build the download. Please try again.");
     }
     setExporting(false);
   }
@@ -130,7 +151,7 @@ export default function AnswersList() {
             <div style={{ fontSize: 12.5, color: "var(--fg-4)", marginTop: 4, maxWidth: 46 + "ch", marginInline: "auto" }}>
               Upload an RFP and Klovered will extract its requirements and draft an answer for each, grounded in your knowledge base.
             </div>
-            <a href="/rfp" className="btn btn-primary" style={{ marginTop: 16 }}>Upload an RFP</a>
+            <Link href="/rfp" className="btn btn-primary" style={{ marginTop: 16 }}>Upload an RFP</Link>
           </div>
         </div>
       </div>
@@ -192,7 +213,7 @@ export default function AnswersList() {
               <path d="M12 4v10M12 14l-4-4M12 14l4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M5 17v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            {exporting ? "Exporting" : "Export .docx"}
+            {exporting ? "Preparing…" : "Download answers"}
           </button>
         </span>
       </div>

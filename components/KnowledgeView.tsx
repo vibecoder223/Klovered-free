@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { api } from "@/lib/api";
 
 type KDoc = {
   id: string;
@@ -39,7 +40,6 @@ const PROCESSING_STATES = new Set([
 const FREE_TIER_CAP = 5;
 
 export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
-  const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [items, setItems] = useState<KDoc[]>(initial);
@@ -62,9 +62,9 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
     return new Promise((resolve) => {
       pollRef.current = setInterval(async () => {
         try {
-          const res = await fetch(`/api/knowledge/${id}`);
+          const res = await api.fetch(`/api/knowledge/${id}`);
           if (!res.ok) return;
-          const { knowledge_document: doc } = await res.json();
+          const doc = await res.json();
           if (doc.stage) setStepIdx(STAGE_TO_STEP[doc.stage] ?? stepIdx);
           if (doc.ingestion_status === "ready") {
             setStepIdx(STEP_COUNT - 1); stopPolling(); resolve();
@@ -77,9 +77,8 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
   }
 
   async function refreshList() {
-    router.refresh();
-    const r = await fetch("/api/knowledge");
-    if (r.ok) setItems((await r.json()).items ?? []);
+    const r = await api.fetch("/api/knowledge");
+    if (r.ok) setItems((await r.json()).knowledge_documents ?? []);
     setLoaded(true);
   }
 
@@ -98,7 +97,7 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("doc_type", docType);
-      const res = await fetch("/api/knowledge/upload", { method: "POST", body: fd });
+      const res = await api.fetch("/api/knowledge/upload", { method: "POST", body: fd });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) { setErr(json.error || `Failed to upload ${file.name}`); continue; }
       const docId = json.knowledge_document?.id;
@@ -111,14 +110,13 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
 
   async function remove(id: string) {
     if (!confirm("Delete this document and its chunks?")) return;
-    const res = await fetch(`/api/knowledge/${id}`, { method: "DELETE" });
+    const res = await api.fetch(`/api/knowledge/${id}`, { method: "DELETE" });
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({ error: "Failed" }));
       setErr(error || "Delete failed");
       return;
     }
     setItems((xs) => xs.filter((x) => x.id !== id));
-    router.refresh();
   }
 
   const canContinue = readyCount > 0;
@@ -266,7 +264,7 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
         <span className="kf-hint">
           You can add more later. {canContinue ? "Two ready documents is enough to start." : "Add at least one document to continue."}
         </span>
-        <a
+        <Link
           href="/rfp"
           className="btn btn-primary btn-lg"
           aria-disabled={!canContinue}
@@ -277,7 +275,7 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-        </a>
+        </Link>
       </div>
 
       {/* Keep-it notice */}

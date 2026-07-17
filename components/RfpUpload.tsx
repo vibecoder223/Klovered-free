@@ -1,7 +1,9 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "./PublicShell";
+import { api } from "@/lib/api";
 
 // Real processing_status values, verified against lib/jobs.ts (deriveDocStatus)
 // and lib/agents.ts (setStatus) — NOT the brief's guessed stage names:
@@ -26,6 +28,7 @@ function phaseIndex(status: string) {
 
 export default function RfpUpload() {
   const { dealId } = useSession();
+  const router = useRouter();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [dragging, setDragging] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -37,33 +40,32 @@ export default function RfpUpload() {
   useEffect(() => {
     if (!dealId) return;
     let cancelled = false;
-    fetch(`/api/answers?deal_id=${dealId}`)
-      .then((r) => r.json())
-      .then(({ questions }) => {
-        if (!cancelled && questions?.length) window.location.href = "/answers";
+    api
+      .dealAnswers(dealId)
+      .then(({ questions }: { questions?: unknown[] }) => {
+        if (!cancelled && questions?.length) router.push("/answers");
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [dealId]);
+  }, [dealId, router]);
 
   // Poll processing status until a terminal state, then advance to answers.
   useEffect(() => {
     if (!doc || doc.status === "completed" || isFailed(doc.status)) return;
     const t = setInterval(async () => {
       try {
-        const r = await fetch(`/api/documents/${doc.id}`);
-        if (!r.ok) return;
-        const { document } = await r.json();
+        const document: { id: string; processing_status: string; error_message?: string | null } =
+          await api.documentStatus(doc.id);
         setDoc({ id: document.id, status: document.processing_status, error: document.error_message });
-        if (document.processing_status === "completed") window.location.href = "/answers";
+        if (document.processing_status === "completed") router.push("/answers");
       } catch {
         /* transient network error, keep polling */
       }
     }, 2000);
     return () => clearInterval(t);
-  }, [doc]);
+  }, [doc, router]);
 
   const handleFile = useCallback(
     async (f: File | null) => {
@@ -75,7 +77,7 @@ export default function RfpUpload() {
         const fd = new FormData();
         fd.append("file", f);
         fd.append("deal_id", dealId);
-        const up = await fetch("/api/documents/upload", { method: "POST", body: fd });
+        const up = await api.fetch("/api/pipeline/documents/upload", { method: "POST", body: fd });
         const j = await up.json().catch(() => ({}));
         if (!up.ok) {
           setErr(j.error || "Upload failed. Please try again.");
@@ -84,11 +86,10 @@ export default function RfpUpload() {
           return;
         }
         const id = j.document?.id;
-        const proc = await fetch("/api/documents/process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ document_id: id }),
-        });
+        // The backend's process route takes document_id as a form field.
+        const pfd = new FormData();
+        pfd.append("document_id", id);
+        const proc = await api.fetch("/api/pipeline/documents/process", { method: "POST", body: pfd });
         const pj = await proc.json().catch(() => ({}));
         if (pj?.skipped) {
           setErr(
