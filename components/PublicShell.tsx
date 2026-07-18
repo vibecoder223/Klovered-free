@@ -10,12 +10,20 @@ import { useGuestSession } from "@/lib/use-session";
 // org exist before any screen calls an API. Screens read it with useSession().
 // Until the session is ready, the content area shows a calm skeleton rather than
 // a spinner, and no child fetch fires (children are only mounted once ready).
-type Session = { ready: boolean; orgId: string | null; dealId: string | null };
+type Session = {
+  ready: boolean;
+  orgId: string | null;
+  dealId: string | null;
+  isAnonymous: boolean;
+  email: string | null;
+};
 
 const SessionCtx = createContext<Session>({
   ready: false,
   orgId: null,
   dealId: null,
+  isAnonymous: true,
+  email: null,
 });
 
 export const useSession = () => useContext(SessionCtx);

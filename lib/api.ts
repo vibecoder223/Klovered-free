@@ -78,4 +78,17 @@ export const api = {
 
   // ---- answers ----
   dealAnswers: (dealId: string) => apiJson(`/api/pipeline/deals/${dealId}/answers`),
+  editResponse: (responseId: string, answerText: string) =>
+    apiJson(`/api/pipeline/responses/${responseId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ answer_text: answerText }),
+    }),
+
+  // ---- share / invite one collaborator ----
+  createInvite: () => apiJson<{ token: string; expires_at: string }>("/api/auth/invite", { method: "POST" }),
+  acceptInvite: (token: string) =>
+    apiJson<{ org_id: string; deal_id: string | null }>("/api/auth/invite/accept", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
 };

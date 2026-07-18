@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
+import { ACTIVE_DEAL_KEY } from "@/lib/use-session";
 import AuthModal from "./AuthModal";
 
 // Header auth control.
@@ -11,6 +13,7 @@ import AuthModal from "./AuthModal";
 //    app bootstraps a fresh anonymous guest (see useGuestSession), so the tool
 //    stays usable without an account.
 export default function AuthButton() {
+  const router = useRouter();
   const [email, setEmail] = useState<string | null>(null);
   const [anon, setAnon] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -56,6 +59,55 @@ export default function AuthButton() {
       cancelled = true;
     };
   }, []);
+
+  // Invite acceptance: someone opened /app/knowledge?invite=<token>.
+  //  • Signed in  → join the shared workspace, remember the shared deal, and go
+  //    to the answers screen.
+  //  • Anonymous  → open the sign-up modal first; the ?invite stays in the URL,
+  //    so after they sign in (page reload) this runs again and accepts.
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      let s;
+      try {
+        s = await api.me();
+      } catch {
+        s = null;
+      }
+      if (cancelled) return;
+      if (!s || s.is_anonymous) {
+        setModalMode("signup");
+        setModalOpen(true);
+        return;
+      }
+      try {
+        const { deal_id } = await api.acceptInvite(token);
+        if (deal_id) {
+          try {
+            sessionStorage.setItem(ACTIVE_DEAL_KEY, deal_id);
+          } catch {
+            /* sessionStorage blocked — the answers screen still works via its own deal */
+          }
+        }
+        const params = new URLSearchParams(window.location.search);
+        params.delete("invite");
+        const rest = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+        router.push("/answers");
+      } catch {
+        // invalid / expired / full — strip the param so it doesn't retry forever
+        const params = new URLSearchParams(window.location.search);
+        params.delete("invite");
+        const rest = params.toString();
+        window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
 
   // Close the account menu on outside click / Escape.
   useEffect(() => {

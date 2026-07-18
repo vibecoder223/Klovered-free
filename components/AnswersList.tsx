@@ -11,6 +11,7 @@ type Q = {
   question_text: string;
   status: string;
   response: {
+    id: string;
     answer_text: string;
     confidence: number | null;
     gap_flag: string | null;
@@ -32,12 +33,71 @@ function bucket(q: Q): Exclude<Filter, "all"> | "pending" {
 }
 
 export default function AnswersList() {
-  const { dealId, ready } = useSession();
+  const { dealId, ready, isAnonymous } = useSession();
   const [qs, setQs] = useState<Q[] | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportErr, setExportErr] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
+
+  // Editing (signed-in only): which question is open, its working text.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // Share (signed-in only): the single-use invite link once minted.
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviting, setInviting] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [shareErr, setShareErr] = useState<string | null>(null);
+
+  const canEdit = !isAnonymous;
+
+  function startEdit(q: Q) {
+    if (!q.response) return;
+    setEditingId(q.id);
+    setDraft(q.response.answer_text || "");
+  }
+
+  async function saveEdit(q: Q) {
+    if (!q.response || saving) return;
+    setSaving(true);
+    try {
+      await api.editResponse(q.response.id, draft);
+      setQs((cur) =>
+        cur
+          ? cur.map((x) =>
+              x.id === q.id && x.response ? { ...x, response: { ...x.response, answer_text: draft } } : x,
+            )
+          : cur,
+      );
+      setEditingId(null);
+    } catch {
+      // keep the editor open; a transient failure shouldn't lose the draft
+    }
+    setSaving(false);
+  }
+
+  async function invite() {
+    if (inviting) return;
+    setInviting(true);
+    setShareErr(null);
+    setCopied(false);
+    try {
+      const { token } = await api.createInvite();
+      const link = `${window.location.origin}/app/knowledge?invite=${token}`;
+      setInviteLink(link);
+      try {
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+      } catch {
+        // clipboard blocked — the link is shown for manual copy
+      }
+    } catch (e) {
+      setShareErr(e instanceof Error ? e.message : "Could not create an invite.");
+    }
+    setInviting(false);
+  }
 
   useEffect(() => {
     if (!ready || !dealId) return;
@@ -207,6 +267,17 @@ export default function AnswersList() {
           </button>
         ))}
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+          {shareErr && <span style={{ fontSize: 12, color: "var(--err)" }}>{shareErr}</span>}
+          {canEdit && (
+            <button className="btn" onClick={invite} disabled={inviting} title="Invite one teammate to view and edit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+                <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                <path d="M19 8v6M22 11h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+              </svg>
+              {inviting ? "Creating…" : copied ? "Link copied ✓" : inviteLink ? "Copy link" : "Invite teammate"}
+            </button>
+          )}
           {exportErr && <span style={{ fontSize: 12, color: "var(--err)" }}>{exportErr}</span>}
           <button className="btn btn-primary" onClick={exportDocx} disabled={exporting}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -217,6 +288,18 @@ export default function AnswersList() {
           </button>
         </span>
       </div>
+
+      {inviteLink && (
+        <div className="kf-invite-strip">
+          <span>
+            Single-use link — share with <b>one</b> teammate. They sign in, then can view and edit this deal with you:
+          </span>
+          <code className="kf-invite-link">{inviteLink}</code>
+        </div>
+      )}
+      {!canEdit && qs.length > 0 && (
+        <div className="kf-signin-note">Sign in to edit answers or invite a teammate.</div>
+      )}
 
       {/* Answer rows */}
       <div className="kf-card">
@@ -243,7 +326,34 @@ export default function AnswersList() {
                     <div className="kf-qt">{q.question_text}</div>
                     {r ? (
                       <>
-                        <p className={`kf-qa${b === "gaps" ? " dim" : ""}`}>{r.answer_text}</p>
+                        {editingId === q.id ? (
+                          <div className="kf-edit">
+                            <textarea
+                              className="kf-edit-ta"
+                              value={draft}
+                              onChange={(e) => setDraft(e.target.value)}
+                              rows={5}
+                              autoFocus
+                            />
+                            <div className="kf-edit-actions">
+                              <button className="btn btn-primary" onClick={() => saveEdit(q)} disabled={saving}>
+                                {saving ? "Saving…" : "Save"}
+                              </button>
+                              <button className="btn" onClick={() => setEditingId(null)} disabled={saving}>
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <p className={`kf-qa${b === "gaps" ? " dim" : ""}`}>{r.answer_text}</p>
+                            {canEdit && (
+                              <button className="kf-edit-btn" onClick={() => startEdit(q)}>
+                                Edit answer
+                              </button>
+                            )}
+                          </>
+                        )}
                         {b === "gaps" ? (
                           <div className="kf-gap-note">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flex: "none", marginTop: 1 }} aria-hidden="true">
