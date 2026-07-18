@@ -344,19 +344,14 @@ export default function AnswersList() {
                       <>
                         <div className="kf-answer">
                           <textarea
-                            className={`kf-answer-box${b === "gaps" ? " gap" : ""}`}
+                            className="kf-answer-box"
                             value={drafts[r.id] ?? r.answer_text ?? ""}
                             onChange={(e) => editText(r.id, e.target.value)}
                             onBlur={() => commitEdit(q)}
                             readOnly={!canEdit}
-                            rows={4}
+                            rows={5}
                             placeholder={b === "gaps" ? "Write this answer yourself…" : undefined}
                           />
-                          <div className="kf-answer-status">
-                            {savingIds[r.id] && <span className="kf-answer-saving">Saving…</span>}
-                            {savedIds[r.id] && <span className="kf-answer-saved">Saved ✓</span>}
-                            {rowErr[r.id] && <span className="kf-answer-err" role="alert">{rowErr[r.id]}</span>}
-                          </div>
                         </div>
                         {b === "gaps" ? (
                           <div className="kf-gap-note">
@@ -376,6 +371,14 @@ export default function AnswersList() {
                               </span>
                             ))}
                             {conf != null && <span className="kf-conf">confidence {conf}</span>}
+                          </div>
+                        )}
+                        {(savingIds[r.id] || savedIds[r.id] || rowErr[r.id]) && (
+                          <div
+                            className={`kf-answer-flag${rowErr[r.id] ? " err" : savedIds[r.id] ? " saved" : ""}`}
+                            role={rowErr[r.id] ? "alert" : undefined}
+                          >
+                            {rowErr[r.id] || (savedIds[r.id] ? "Saved ✓" : "Saving…")}
                           </div>
                         )}
                       </>

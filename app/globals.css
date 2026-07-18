@@ -2002,20 +2002,22 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 
 /* ── Answer editing + share (signed-in) ──────────────────────────────────── */
 /* Answer box — always a live textbox under each question, no separate "edit
-   mode" to click into. Saves on blur. */
+   mode" to click into. Saves on blur. Recessed fill (like .textarea) so it
+   reads as an editable well inside the row, not a bordered card-on-a-card. */
 .kf-answer { margin-top: 8px; }
 .kf-answer-box {
-  width: 100%; resize: vertical; min-height: 80px;
-  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; line-height: 1.55;
+  width: 100%; resize: vertical; min-height: 108px;
+  padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--bg-2); color: var(--fg); font: inherit; font-size: 13px; line-height: 1.6;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
-.kf-answer-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-.kf-answer-box.gap { border-color: oklch(0.82 0.09 70); background: var(--warn-tint); }
+.kf-answer-box::placeholder { color: var(--fg-5); }
+.kf-answer-box:hover { border-color: var(--border-strong); }
+.kf-answer-box:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-glow); }
 .kf-answer-box[readonly] { background: var(--bg); color: var(--fg-2); cursor: default; }
-.kf-answer-status { min-height: 16px; margin-top: 4px; font-size: 11.5px; }
-.kf-answer-saving { color: var(--fg-4); }
-.kf-answer-saved { color: var(--accent-3); font-weight: 600; }
-.kf-answer-err { color: var(--err); }
+.kf-answer-flag { margin-top: 6px; font-size: 11px; color: var(--fg-4); }
+.kf-answer-flag.saved { color: var(--accent-3); font-weight: 600; }
+.kf-answer-flag.err { color: var(--err); }
 .kf-signin-note { margin: 10px 0 0; font-size: 12px; color: var(--fg-4); }
 
 /* Header invite button */
