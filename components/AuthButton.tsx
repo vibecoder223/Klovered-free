@@ -139,20 +139,21 @@ export default function AuthButton() {
   }
 
   if (!anon && email) {
+    // Fixed-width identity: a monogram avatar, not the spelled-out address.
+    // The full email lives in the dropdown. A variable-length email in the bar
+    // shifted the centered StepNav off-axis; a constant-width avatar doesn't.
+    const initial = email.trim().charAt(0).toUpperCase() || "?";
     return (
       <div className="pub-account" ref={menuRef}>
         <button
-          className="pub-saved pub-saved-btn"
+          className="pub-avatar-btn"
           onClick={() => setMenuOpen((v) => !v)}
           aria-haspopup="menu"
           aria-expanded={menuOpen}
+          aria-label={`Account — signed in as ${email}`}
           title={`Signed in as ${email}`}
         >
-          <span className="pub-saved-dot" aria-hidden="true" />
-          <span className="pub-saved-email">{email}</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true" className="pub-saved-caret">
-            <path fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
-          </svg>
+          <span className="pub-avatar" aria-hidden="true">{initial}</span>
         </button>
         {menuOpen && (
           <div className="pub-menu" role="menu">
