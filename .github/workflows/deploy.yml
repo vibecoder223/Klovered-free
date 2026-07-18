@@ -1,0 +1,45 @@
+name: Deploy
+
+# After CI passes on master, SSH into the Droplet, pull the new frontend code,
+# and rebuild ONLY the `tool` service (the klovered-free RFP tool served at
+# klovered.com/app). The full stack lives in the sibling Klovered-python repo's
+# docker-compose.stack.yml; compose is run from there but only `tool` is
+# rebuilt/recreated so api + web + caddy stay untouched.
+#
+# Required repo secrets (use the SAME dedicated deploy key as the backend repo):
+#   DROPLET_HOST      the Droplet's public IP / hostname
+#   DROPLET_USER      ssh user (e.g. root, or a deploy user)
+#   DROPLET_SSH_KEY   a private key whose public half is in the Droplet's authorized_keys
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [master]
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            set -e
+            # The tool's source is a sibling clone; pull the new frontend code.
+            cd ~/klovered-free
+            git pull --ff-only
+
+            # Run compose from the stack repo so the project stays the default
+            # "klovered-python" and the other services are left in place.
+            cd ~/Klovered-python
+            COMPOSE="docker compose -f docker-compose.stack.yml"
+
+            $COMPOSE build tool
+            # Recreate ONLY tool; --no-deps leaves api + web + caddy running.
+            $COMPOSE up -d --no-deps tool
+            docker image prune -f
