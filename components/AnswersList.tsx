@@ -339,7 +339,13 @@ export default function AnswersList() {
                 <div className="kf-qtop">
                   <span className="kf-qn">{n}</span>
                   <div className="kf-qbody">
-                    <div className="kf-qt">{q.question_text}</div>
+                    {/* Title and status share one line, so the status pill never
+                        steals width from the answer well below it — every answer
+                        box spans the full column, identical width row to row. */}
+                    <div className="kf-qhead-row">
+                      <div className="kf-qt">{q.question_text}</div>
+                      <span className={`kf-qstat kf-badge ${badge.tone}`}><span className="kf-d" />{badge.label}</span>
+                    </div>
                     {r ? (
                       <>
                         <div className="kf-answer">
@@ -386,7 +392,6 @@ export default function AnswersList() {
                       <p className="kf-qa dim">Draft pending.</p>
                     )}
                   </div>
-                  <span className={`kf-qstat kf-badge ${badge.tone}`}><span className="kf-d" />{badge.label}</span>
                 </div>
               </div>
             );

@@ -1757,14 +1757,18 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 .kf-qtop { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; }
 .kf-qn { font-size: 12px; color: var(--fg-4); font-variant-numeric: tabular-nums; padding-top: 1px; width: 26px; flex: none; }
 .kf-qbody { min-width: 0; flex: 1; }
-.kf-qt { font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--fg); }
+/* Title + status pill on one line. The pill is flex:none, the title takes the
+   rest — so the answer well below always spans the full body width, giving
+   every answer box an identical width regardless of the pill's label length. */
+.kf-qhead-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.kf-qt { font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--fg); flex: 1; min-width: 0; }
 .kf-qa { font-size: 13px; color: var(--fg-2); margin-top: 7px; line-height: 1.55; max-width: 66ch; white-space: pre-wrap; }
 .kf-qa.dim { color: var(--fg-4); }
 .kf-qmeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
 .kf-cite { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: var(--accent-3); background: var(--accent-tint); border-radius: 5px; padding: 3px 9px; }
 .kf-cite .kf-pg { color: var(--accent-2); font-variant-numeric: tabular-nums; }
 .kf-conf { font-size: 11.5px; color: var(--fg-4); font-variant-numeric: tabular-nums; }
-.kf-qstat { flex: none; padding-top: 2px; }
+.kf-qstat { flex: none; padding-top: 1px; }
 .kf-gap-note { display: flex; gap: 9px; align-items: flex-start; background: var(--warn-tint); border: 1px solid oklch(0.88 0.06 70); border-radius: 6px; padding: 9px 12px; margin-top: 9px; font-size: 12.5px; color: oklch(0.42 0.1 62); }
 .kf-keepstrip { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--accent-tint); border: 1px solid var(--accent-tint2); border-radius: 8px; padding: 12px 16px; margin-top: 20px; }
 .kf-keepstrip .kf-t { font-size: 13px; color: var(--accent-3); }
