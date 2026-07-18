@@ -131,40 +131,69 @@ export default function AnswersList() {
       .catch(() => setQs([]));
   }, [ready, dealId]);
 
-  // Client-side export (v1): build a Markdown document from the loaded answers
-  // and download it — no server round-trip. Full .docx export is a fast follow.
-  function exportDocx() {
+  // Client-side export: build a real Word (.docx) document from the loaded
+  // answers and download it — no server round-trip. Unanswered/gap questions are
+  // left blank for the team to fill in; we don't stamp system notes ("gap: no
+  // source found") into a document that ships to a client.
+  async function exportDocx() {
     if (exporting || !qs || qs.length === 0) return;
     setExporting(true);
     setExportErr(null);
     try {
-      const lines: string[] = ["# Klovered — drafted answers", ""];
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = await import("docx");
+
+      const children: InstanceType<typeof Paragraph>[] = [
+        new Paragraph({ text: "Klovered — drafted answers", heading: HeadingLevel.TITLE }),
+      ];
+
       qs.forEach((q, i) => {
-        lines.push(`## ${i + 1}. ${q.question_text}`);
+        children.push(
+          new Paragraph({
+            heading: HeadingLevel.HEADING_2,
+            spacing: { before: 320, after: 120 },
+            children: [new TextRun({ text: `${i + 1}. ${q.question_text}` })],
+          }),
+        );
+
         const r = q.response;
-        if (!r) {
-          lines.push("", "_Draft pending._", "");
-          return;
-        }
-        lines.push("", r.answer_text || "");
-        if (r.gap_flag === "no_source") {
-          lines.push("", "> Gap: no source found — add this to your knowledge base or write it yourself.");
-        } else {
+        const answer = (r?.answer_text ?? "").trim();
+        // One paragraph per line of the answer; blank questions get an empty
+        // paragraph so there's room to write under the heading.
+        const paras = answer ? answer.split(/\n+/) : [""];
+        paras.forEach((p) =>
+          children.push(new Paragraph({ children: [new TextRun(p)], spacing: { after: 120 } })),
+        );
+
+        // Traceability line (sources + confidence) for grounded answers only —
+        // never for gaps, which have no source to cite.
+        if (r && r.gap_flag !== "no_source") {
+          const meta: string[] = [];
           if (r.citations?.length) {
-            const srcs = r.citations
-              .map((c) => (c.filename ?? "source") + (c.page_start != null ? ` p.${c.page_start}` : ""))
-              .join("; ");
-            lines.push("", `Sources: ${srcs}`);
+            meta.push(
+              "Sources: " +
+                r.citations
+                  .map((c) => (c.filename ?? "source") + (c.page_start != null ? ` p.${c.page_start}` : ""))
+                  .join("; "),
+            );
           }
-          if (r.confidence != null) lines.push(`Confidence: ${r.confidence.toFixed(2)}`);
+          if (r.confidence != null) meta.push(`Confidence: ${Math.round(r.confidence * 100)}%`);
+          if (meta.length) {
+            children.push(
+              new Paragraph({
+                spacing: { after: 80 },
+                children: [new TextRun({ text: meta.join("   ·   "), italics: true, color: "6B7280", size: 18 })],
+              }),
+            );
+          }
         }
-        lines.push("");
       });
-      const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+
+      const doc = new Document({ sections: [{ children }] });
+      const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "klovered-answers.md";
+      a.download = "klovered-answers.docx";
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -308,7 +337,7 @@ export default function AnswersList() {
               <path d="M12 4v10M12 14l-4-4M12 14l4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M5 17v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
             </svg>
-            {exporting ? "Preparing…" : "Download answers"}
+            {exporting ? "Preparing…" : "Download as Word"}
           </button>
         </span>
       </div>
