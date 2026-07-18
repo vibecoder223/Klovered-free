@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import StepNav from "./StepNav";
 import AuthButton from "./AuthButton";
+import InviteButton from "./InviteButton";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { useGuestSession } from "@/lib/use-session";
 
@@ -96,6 +97,7 @@ export default function PublicShell({
           <StepNav current={step} />
         </div>
         <div className="pub-authslot">
+          {session.ready && !session.isAnonymous && <InviteButton />}
           <AuthButton />
         </div>
       </header>
@@ -105,8 +107,9 @@ export default function PublicShell({
       </main>
 
       <footer className="pub-footer">
-        Your files are private to this session and auto-delete after 48 hours.
-        Sign in to keep them.
+        {session.isAnonymous
+          ? "Your files are private to this session and auto-delete after 48 hours. Sign in to keep them."
+          : "Your work is saved to your account."}
       </footer>
     </SessionCtx.Provider>
   );

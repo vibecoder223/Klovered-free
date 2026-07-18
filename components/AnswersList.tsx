@@ -387,13 +387,15 @@ export default function AnswersList() {
         )}
       </div>
 
-      {/* Keep strip */}
-      <div className="kf-keepstrip">
-        <span className="kf-t">
-          <b>These answers auto-delete in 48 hours.</b> Sign in with Google to keep them and raise your limits.
-        </span>
-        <AuthButton />
-      </div>
+      {/* Keep strip — only for guests; signed-in work is already saved. */}
+      {isAnonymous && (
+        <div className="kf-keepstrip">
+          <span className="kf-t">
+            <b>These answers auto-delete in 48 hours.</b> Sign in with Google to keep them and raise your limits.
+          </span>
+          <AuthButton />
+        </div>
+      )}
     </div>
   );
 }

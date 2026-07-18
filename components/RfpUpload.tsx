@@ -35,6 +35,21 @@ export default function RfpUpload() {
   const [doc, setDoc] = useState<{ id: string; status: string; error?: string | null } | null>(null);
   const [rfpFile, setRfpFile] = useState<{ name: string; size: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [daily, setDaily] = useState<{ used: number; cap: number } | null>(null);
+
+  // Show remaining RFP quota for the day (advisory; the backend enforces it).
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .limits()
+      .then((l) => {
+        if (!cancelled) setDaily(l.rfp);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Resume: if this session already has a processed RFP, jump to answers.
   useEffect(() => {
@@ -163,7 +178,12 @@ export default function RfpUpload() {
             <div className="kf-s">
               {busy ? "One moment." : <>or <b>browse</b> to choose a file</>}
             </div>
-            <div className="kf-fmt">pdf or docx, up to 50 MB, one per session</div>
+            <div className="kf-fmt">
+              pdf or docx, up to 50 MB, one per session
+              {daily && (
+                <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> RFP uploads left today</>
+              )}
+            </div>
           </div>
           {err && (
             <div className="kf-gap-note" role="alert" style={{ marginTop: 14 }}>

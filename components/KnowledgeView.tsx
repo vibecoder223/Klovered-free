@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
+import { useSession } from "./PublicShell";
 
 type KDoc = {
   id: string;
@@ -40,10 +41,12 @@ const PROCESSING_STATES = new Set([
 const FREE_TIER_CAP = 5;
 
 export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
+  const { isAnonymous } = useSession();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [items, setItems] = useState<KDoc[]>(initial);
   const [loaded, setLoaded] = useState(false);
+  const [daily, setDaily] = useState<{ used: number; cap: number } | null>(null);
   const [docType, setDocType] = useState("past_proposal");
   const [dragging, setDragging] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -79,6 +82,12 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
   async function refreshList() {
     const r = await api.fetch("/api/knowledge");
     if (r.ok) setItems((await r.json()).knowledge_documents ?? []);
+    try {
+      const lim = await api.limits();
+      setDaily(lim.knowledge);
+    } catch {
+      // limits are advisory — a failure here shouldn't block the list
+    }
     setLoaded(true);
   }
 
@@ -158,7 +167,12 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
         <div className="kf-up"><UploadIcon /></div>
         <div className="kf-t">Drop files to add knowledge</div>
         <div className="kf-s">or <b>browse</b> your computer</div>
-        <div className="kf-fmt">pdf, docx and txt, up to 50 MB each, {FREE_TIER_CAP} files on the free tier</div>
+        <div className="kf-fmt">
+          pdf, docx and txt, up to 50 MB each, {FREE_TIER_CAP} files on the free tier
+          {daily && (
+            <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> uploads left today</>
+          )}
+        </div>
       </div>
 
       {/* Add-as segmented control */}
@@ -278,13 +292,15 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
         </Link>
       </div>
 
-      {/* Keep-it notice */}
-      <div className="kf-keep">
-        <div className="kf-kt">
-          <span className="kf-clock"><ClockIcon /></span>
-          <span>Everything you upload <b>auto-deletes in 48 hours</b>. Sign in with Google to keep it.</span>
+      {/* Keep-it notice — guests only; a signed-in account's uploads persist. */}
+      {isAnonymous && (
+        <div className="kf-keep">
+          <div className="kf-kt">
+            <span className="kf-clock"><ClockIcon /></span>
+            <span>Everything you upload <b>auto-deletes in 48 hours</b>. Sign in with Google to keep it.</span>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
