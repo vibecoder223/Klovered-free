@@ -40,10 +40,14 @@ export default function AnswersList() {
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
-  // Editing (signed-in only): which question is open, its working text.
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [draft, setDraft] = useState("");
-  const [saving, setSaving] = useState(false);
+  // Editing: every answer is a live textbox, no separate "edit mode" to enter.
+  // drafts holds in-progress text per response id (only set once touched);
+  // it saves on blur, so the field can be edited freely without a round-trip
+  // per keystroke.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
+  const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
+  const [rowErr, setRowErr] = useState<Record<string, string>>({});
 
   // Share: the single-use invite link, shown in a popup once minted.
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -57,29 +61,36 @@ export default function AnswersList() {
   const canEdit = true;
   const canInvite = !isAnonymous;
 
-  function startEdit(q: Q) {
-    if (!q.response) return;
-    setEditingId(q.id);
-    setDraft(q.response.answer_text || "");
+  function editText(responseId: string, value: string) {
+    setDrafts((d) => ({ ...d, [responseId]: value }));
+    setRowErr((e) => (e[responseId] ? { ...e, [responseId]: "" } : e));
   }
 
-  async function saveEdit(q: Q) {
-    if (!q.response || saving) return;
-    setSaving(true);
+  async function commitEdit(q: Q) {
+    const r = q.response;
+    if (!r) return;
+    const value = drafts[r.id];
+    // Untouched, or unchanged from what's already saved — nothing to do.
+    if (value === undefined || value === r.answer_text) return;
+    setSavingIds((s) => ({ ...s, [r.id]: true }));
     try {
-      await api.editResponse(q.response.id, draft);
+      await api.editResponse(r.id, value);
       setQs((cur) =>
         cur
           ? cur.map((x) =>
-              x.id === q.id && x.response ? { ...x, response: { ...x.response, answer_text: draft } } : x,
+              x.id === q.id && x.response ? { ...x, response: { ...x.response, answer_text: value } } : x,
             )
           : cur,
       );
-      setEditingId(null);
-    } catch {
-      // keep the editor open; a transient failure shouldn't lose the draft
+      setSavedIds((s) => ({ ...s, [r.id]: true }));
+      setTimeout(() => setSavedIds((s) => ({ ...s, [r.id]: false })), 1600);
+    } catch (e) {
+      setRowErr((err) => ({
+        ...err,
+        [r.id]: e instanceof Error ? e.message : "Could not save. Try again.",
+      }));
     }
-    setSaving(false);
+    setSavingIds((s) => ({ ...s, [r.id]: false }));
   }
 
   function openShare() {
@@ -331,34 +342,22 @@ export default function AnswersList() {
                     <div className="kf-qt">{q.question_text}</div>
                     {r ? (
                       <>
-                        {editingId === q.id ? (
-                          <div className="kf-edit">
-                            <textarea
-                              className="kf-edit-ta"
-                              value={draft}
-                              onChange={(e) => setDraft(e.target.value)}
-                              rows={5}
-                              autoFocus
-                            />
-                            <div className="kf-edit-actions">
-                              <button className="btn btn-primary" onClick={() => saveEdit(q)} disabled={saving}>
-                                {saving ? "Saving…" : "Save"}
-                              </button>
-                              <button className="btn" onClick={() => setEditingId(null)} disabled={saving}>
-                                Cancel
-                              </button>
-                            </div>
+                        <div className="kf-answer">
+                          <textarea
+                            className={`kf-answer-box${b === "gaps" ? " gap" : ""}`}
+                            value={drafts[r.id] ?? r.answer_text ?? ""}
+                            onChange={(e) => editText(r.id, e.target.value)}
+                            onBlur={() => commitEdit(q)}
+                            readOnly={!canEdit}
+                            rows={4}
+                            placeholder={b === "gaps" ? "Write this answer yourself…" : undefined}
+                          />
+                          <div className="kf-answer-status">
+                            {savingIds[r.id] && <span className="kf-answer-saving">Saving…</span>}
+                            {savedIds[r.id] && <span className="kf-answer-saved">Saved ✓</span>}
+                            {rowErr[r.id] && <span className="kf-answer-err" role="alert">{rowErr[r.id]}</span>}
                           </div>
-                        ) : (
-                          <>
-                            <p className={`kf-qa${b === "gaps" ? " dim" : ""}`}>{r.answer_text}</p>
-                            {canEdit && (
-                              <button className="kf-edit-btn" onClick={() => startEdit(q)}>
-                                Edit answer
-                              </button>
-                            )}
-                          </>
-                        )}
+                        </div>
                         {b === "gaps" ? (
                           <div className="kf-gap-note">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flex: "none", marginTop: 1 }} aria-hidden="true">
@@ -366,7 +365,7 @@ export default function AnswersList() {
                               <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                               <circle cx="12" cy="17.2" r="1" fill="currentColor" />
                             </svg>
-                            <span>Gap: no source found. Add this to your knowledge, or write it yourself in the export.</span>
+                            <span>Gap: no source found. Add this to your knowledge base, or write the answer yourself above.</span>
                           </div>
                         ) : (
                           <div className="kf-qmeta">

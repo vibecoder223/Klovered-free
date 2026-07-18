@@ -2001,31 +2001,21 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 }
 
 /* ── Answer editing + share (signed-in) ──────────────────────────────────── */
-.kf-edit { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
-.kf-edit-ta {
-  width: 100%; resize: vertical; min-height: 88px;
-  padding: 10px 12px; border: 1px solid var(--border-strong); border-radius: 10px;
+/* Answer box — always a live textbox under each question, no separate "edit
+   mode" to click into. Saves on blur. */
+.kf-answer { margin-top: 8px; }
+.kf-answer-box {
+  width: 100%; resize: vertical; min-height: 80px;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px;
   background: var(--surface); color: var(--fg); font: inherit; font-size: 13px; line-height: 1.55;
 }
-.kf-edit-ta:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
-.kf-edit-actions { display: flex; gap: 8px; }
-.kf-edit-btn {
-  align-self: flex-start; margin-top: 2px;
-  border: none; background: none; padding: 0; cursor: pointer;
-  font-size: 12px; font-weight: 600; color: var(--accent-2);
-}
-.kf-edit-btn:hover { text-decoration: underline; }
-.kf-invite-strip {
-  display: flex; flex-direction: column; gap: 6px;
-  margin: 12px 0 0; padding: 12px 14px;
-  background: var(--accent-tint); border: 1px solid var(--border); border-radius: 10px;
-  font-size: 12.5px; color: var(--fg-3);
-}
-.kf-invite-link {
-  font-family: var(--mono, ui-monospace, monospace); font-size: 12px;
-  color: var(--fg); background: var(--surface); border: 1px solid var(--border);
-  border-radius: 7px; padding: 7px 9px; word-break: break-all;
-}
+.kf-answer-box:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+.kf-answer-box.gap { border-color: oklch(0.82 0.09 70); background: var(--warn-tint); }
+.kf-answer-box[readonly] { background: var(--bg); color: var(--fg-2); cursor: default; }
+.kf-answer-status { min-height: 16px; margin-top: 4px; font-size: 11.5px; }
+.kf-answer-saving { color: var(--fg-4); }
+.kf-answer-saved { color: var(--accent-3); font-weight: 600; }
+.kf-answer-err { color: var(--err); }
 .kf-signin-note { margin: 10px 0 0; font-size: 12px; color: var(--fg-4); }
 
 /* Header invite button */
