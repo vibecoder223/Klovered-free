@@ -355,7 +355,7 @@ export default function AnswersList() {
                             onChange={(e) => editText(r.id, e.target.value)}
                             onBlur={() => commitEdit(q)}
                             readOnly={!canEdit}
-                            rows={5}
+                            rows={4}
                             placeholder={b === "gaps" ? "Write this answer yourself…" : undefined}
                           />
                         </div>
