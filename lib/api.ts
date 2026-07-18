@@ -76,7 +76,7 @@ export const api = {
   documentStatus: (id: string) => apiJson(`/api/pipeline/documents/${id}`),
   documentDelete: (id: string) => apiJson(`/api/pipeline/documents/${id}`, { method: "DELETE" }),
 
-  // ---- daily upload limits (today's usage) ----
+  // ---- weekly upload limits (this week's usage) ----
   limits: () =>
     apiJson<{ knowledge: { used: number; cap: number }; rfp: { used: number; cap: number } }>(
       "/api/pipeline/limits",

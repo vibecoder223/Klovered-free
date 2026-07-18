@@ -181,7 +181,7 @@ export default function RfpUpload() {
             <div className="kf-fmt">
               pdf or docx, up to 50 MB, one per session
               {daily && (
-                <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> RFP uploads left today</>
+                <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> RFP uploads left this week</>
               )}
             </div>
           </div>

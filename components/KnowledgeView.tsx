@@ -38,7 +38,9 @@ const PROCESSING_STATES = new Set([
   "pending", "uploading", "downloading", "parsing", "chunking", "embedding", "storing",
 ]);
 
-const FREE_TIER_CAP = 5;
+// Free-tier upload quota: 3 per calendar week, matching the backend
+// WEEKLY_UPLOAD_CAP. Used for both the dropzone hint and the documents counter.
+const FREE_TIER_CAP = 3;
 
 export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
   const { isAnonymous } = useSession();
@@ -168,9 +170,11 @@ export default function KnowledgeView({ initial }: { initial: KDoc[] }) {
         <div className="kf-t">Drop files to add knowledge</div>
         <div className="kf-s">or <b>browse</b> your computer</div>
         <div className="kf-fmt">
-          pdf, docx and txt, up to 50 MB each, {FREE_TIER_CAP} files on the free tier
-          {daily && (
-            <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> uploads left today</>
+          pdf, docx and txt, up to 50 MB each
+          {daily ? (
+            <> · <b>{Math.max(0, daily.cap - daily.used)} of {daily.cap}</b> uploads left this week</>
+          ) : (
+            <> · <b>{FREE_TIER_CAP} uploads per week</b> on the free tier</>
           )}
         </div>
       </div>
