@@ -45,13 +45,17 @@ export default function AnswersList() {
   const [draft, setDraft] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Share (signed-in only): the single-use invite link once minted.
+  // Share: the single-use invite link, shown in a popup once minted.
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareErr, setShareErr] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
-  const canEdit = !isAnonymous;
+  // Everyone can edit their own drafted answers (RLS scopes each edit to the
+  // caller's org). Inviting a teammate still needs a real account.
+  const canEdit = true;
+  const canInvite = !isAnonymous;
 
   function startEdit(q: Q) {
     if (!q.response) return;
@@ -78,25 +82,34 @@ export default function AnswersList() {
     setSaving(false);
   }
 
-  async function invite() {
+  function openShare() {
+    setShareOpen(true);
+    setShareErr(null);
+    if (!inviteLink && !inviting) mintInvite();
+  }
+
+  async function mintInvite() {
     if (inviting) return;
     setInviting(true);
     setShareErr(null);
-    setCopied(false);
     try {
       const { token } = await api.createInvite();
-      const link = `${window.location.origin}/app/knowledge?invite=${token}`;
-      setInviteLink(link);
-      try {
-        await navigator.clipboard.writeText(link);
-        setCopied(true);
-      } catch {
-        // clipboard blocked — the link is shown for manual copy
-      }
+      setInviteLink(`${window.location.origin}/app/knowledge?invite=${token}`);
     } catch (e) {
       setShareErr(e instanceof Error ? e.message : "Could not create an invite.");
     }
     setInviting(false);
+  }
+
+  async function copyLink() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard blocked — the link stays visible for manual copy
+    }
   }
 
   useEffect(() => {
@@ -268,14 +281,14 @@ export default function AnswersList() {
         ))}
         <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
           {shareErr && <span style={{ fontSize: 12, color: "var(--err)" }}>{shareErr}</span>}
-          {canEdit && (
-            <button className="btn" onClick={invite} disabled={inviting} title="Invite one teammate to view and edit">
+          {canInvite && (
+            <button className="btn" onClick={openShare} title="Invite one teammate to view and edit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <circle cx="9" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.8" />
                 <path d="M3.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 <path d="M19 8v6M22 11h-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
-              {inviting ? "Creating…" : copied ? "Link copied ✓" : inviteLink ? "Copy link" : "Invite teammate"}
+              Share
             </button>
           )}
           {exportErr && <span style={{ fontSize: 12, color: "var(--err)" }}>{exportErr}</span>}
@@ -289,16 +302,8 @@ export default function AnswersList() {
         </span>
       </div>
 
-      {inviteLink && (
-        <div className="kf-invite-strip">
-          <span>
-            Single-use link — share with <b>one</b> teammate. They sign in, then can view and edit this deal with you:
-          </span>
-          <code className="kf-invite-link">{inviteLink}</code>
-        </div>
-      )}
-      {!canEdit && qs.length > 0 && (
-        <div className="kf-signin-note">Sign in to edit answers or invite a teammate.</div>
+      {!canInvite && qs.length > 0 && (
+        <div className="kf-signin-note">Sign in to invite a teammate to this deal.</div>
       )}
 
       {/* Answer rows */}
@@ -387,6 +392,17 @@ export default function AnswersList() {
         )}
       </div>
 
+      {shareOpen && (
+        <ShareModal
+          link={inviteLink}
+          loading={inviting}
+          copied={copied}
+          error={shareErr}
+          onCopy={copyLink}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
+
       {/* Keep strip — only for guests; signed-in work is already saved. */}
       {isAnonymous && (
         <div className="kf-keepstrip">
@@ -396,6 +412,76 @@ export default function AnswersList() {
           <AuthButton />
         </div>
       )}
+    </div>
+  );
+}
+
+// Share popup — a focused modal (Canva / draw.io style) for the single-use
+// invite link. Opens immediately with a "creating…" state, then reveals the
+// link with a one-click copy. Closes on overlay click or Escape.
+function ShareModal({
+  link,
+  loading,
+  copied,
+  error,
+  onCopy,
+  onClose,
+}: {
+  link: string | null;
+  loading: boolean;
+  copied: boolean;
+  error: string | null;
+  onCopy: () => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      className="kf-share-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Share this deal"
+      onClick={onClose}
+    >
+      <div className="kf-share-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="kf-share-close" onClick={onClose} aria-label="Close">
+          ×
+        </button>
+        <h2 className="kf-share-title">Share this deal</h2>
+        <p className="kf-share-sub">
+          Invite <b>one</b> teammate to view and edit these answers with you. The link works once, then expires.
+        </p>
+
+        {error ? (
+          <p className="kf-share-error" role="alert">{error}</p>
+        ) : (
+          <div className="kf-share-row">
+            <input
+              className="kf-share-input"
+              readOnly
+              value={loading ? "Creating your link…" : link ?? ""}
+              onFocus={(e) => e.currentTarget.select()}
+              aria-label="Invite link"
+            />
+            <button
+              className="btn btn-primary kf-share-copy"
+              onClick={onCopy}
+              disabled={loading || !link}
+            >
+              {copied ? "Copied ✓" : "Copy link"}
+            </button>
+          </div>
+        )}
+
+        <p className="kf-share-foot">They sign in with Google, then land on this deal alongside you.</p>
+      </div>
     </div>
   );
 }
