@@ -2,12 +2,12 @@ name: CI
 
 # Default branch is `master` (not `main`) — verified with `git remote show origin`.
 #
-# CD is handled by Vercel's native GitHub integration (the Vercel GitHub App),
-# NOT by this workflow: every push to `master` triggers a Vercel production
-# deploy, and every PR gets a preview deploy, automatically. This workflow is
-# purely the verification gate — lint + typecheck-via-build — so a red build is
-# caught here in parallel with Vercel's own build. There is no `vercel deploy`
-# step and no VERCEL_* secrets to manage.
+# This workflow is the verification gate only — lint + typecheck-via-build.
+# Deployment is NOT handled here and is NOT on Vercel (that was the pre-DO
+# setup). The app runs on the DigitalOcean Droplet as the `tool` service in
+# Klovered-python/docker-compose.stack.yml, served at klovered.com/app behind
+# Caddy. To deploy, the Droplet's ~/klovered-free clone is pulled and the
+# `tool` service rebuilt (no auto-deploy workflow exists yet).
 on:
   push:
     branches: [master]
