@@ -1634,6 +1634,19 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
   .stepnav-step.is-active .stepnav-label { display: inline; }
   .stepnav-rule { width: 14px; }
 }
+/* Phones: even the single active label makes the centered step nav wide enough
+   to collide with the account avatar in the fixed 3-column topbar (measured
+   overlap at 375px). Drop to numbered circles only — the filled green circle
+   already carries the active state — and tighten padding/gaps so the wordmark
+   and avatar keep clear room on either side. */
+@media (max-width: 600px) {
+  .pub-topbar { padding: 0 14px; gap: 8px; }
+  .pub-authslot { gap: 8px; }
+  .stepnav { gap: 8px; }
+  .stepnav-rule { width: 12px; }
+  .stepnav-label,
+  .stepnav-step.is-active .stepnav-label { display: none; }
+}
 
 /* Focused single-column page */
 .kf-page { max-width: 760px; margin: 0 auto; padding: 36px 24px 56px; }
