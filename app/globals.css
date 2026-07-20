@@ -2025,5 +2025,70 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 .kf-answer-flag.err { color: var(--err); }
 .kf-signin-note { margin: 10px 0 0; font-size: 12px; color: var(--fg-4); }
 
+/* ── One-time feedback card (bottom-right, non-blocking) ─────────────────────
+   Slides in over the Answers screen once the visitor has seen their answers.
+   Fixed to the viewport corner so it rides along as they scroll; calm, easy to
+   dismiss, matching the tool's modal vocabulary. */
+.kf-fb {
+  position: fixed; right: 22px; bottom: 22px; z-index: 70; width: 344px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 2px 6px oklch(0.20 0.015 152 / 0.06), 0 20px 48px -16px oklch(0.20 0.015 152 / 0.30);
+  padding: 16px 16px 15px; animation: kf-fb-rise 0.28s var(--ease);
+}
+@keyframes kf-fb-rise { from { opacity: 0; transform: translateY(14px) scale(0.98); } to { opacity: 1; transform: none; } }
+.kf-fb-close {
+  position: absolute; top: 9px; right: 10px; width: 26px; height: 26px;
+  border: 0; background: transparent; border-radius: 7px; color: var(--fg-4);
+  font-size: 19px; line-height: 1; display: grid; place-items: center; cursor: pointer;
+}
+.kf-fb-close:hover { background: var(--bg-2); color: var(--fg-2); }
+.kf-fb-eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--accent-3); display: flex; align-items: center; gap: 6px; }
+.kf-fb-spark { width: 13px; height: 13px; flex: none; }
+.kf-fb-title { font-size: 15px; font-weight: 650; color: var(--fg); margin-top: 7px; letter-spacing: -0.01em; }
+.kf-fb-sub { font-size: 12.5px; color: var(--fg-3); margin-top: 3px; line-height: 1.45; }
+.kf-fb-stars { display: flex; gap: 6px; margin-top: 14px; }
+.kf-fb-star {
+  width: 34px; height: 34px; border: 1px solid var(--border); background: var(--surface);
+  border-radius: 9px; display: grid; place-items: center; cursor: pointer;
+  transition: background 0.12s var(--ease), border-color 0.12s var(--ease), transform 0.12s var(--ease);
+}
+.kf-fb-star svg { width: 18px; height: 18px; }
+.kf-fb-star:hover { border-color: var(--accent-line); background: var(--accent-tint); transform: translateY(-1px); }
+.kf-fb-star.on { border-color: var(--accent-line); background: var(--accent-tint); }
+.kf-fb-scale { display: flex; justify-content: space-between; margin-top: 7px; font-size: 10.5px; color: var(--fg-5); }
+.kf-fb-rated { font-size: 11.5px; color: var(--fg-4); margin-top: 11px; }
+.kf-fb-rated b { color: var(--accent-3); font-weight: 600; }
+.kf-fb-note {
+  width: 100%; margin-top: 10px; min-height: 60px; resize: vertical;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 9px;
+  padding: 9px 11px; font: inherit; font-size: 12.5px; line-height: 1.5; color: var(--fg);
+}
+.kf-fb-note::placeholder { color: var(--fg-4); }
+.kf-fb-note:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-glow); }
+.kf-fb-email {
+  width: 100%; margin-top: 8px; height: 36px; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: 9px; padding: 0 11px;
+  font: inherit; font-size: 12.5px; color: var(--fg);
+}
+.kf-fb-email::placeholder { color: var(--fg-4); }
+.kf-fb-email:focus { outline: none; border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-glow); }
+.kf-fb-err { margin-top: 9px; font-size: 12px; color: var(--err); }
+.kf-fb-actions { display: flex; align-items: center; justify-content: flex-end; gap: 9px; margin-top: 13px; }
+.kf-fb-btn { font-size: 12.5px; font-weight: 600; padding: 7px 13px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--fg-2); cursor: pointer; }
+.kf-fb-btn:hover { background: var(--bg-2); border-color: var(--border-strong); color: var(--fg); }
+.kf-fb-btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.kf-fb-btn.primary:hover { background: var(--accent-2); border-color: var(--accent-2); }
+.kf-fb-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.kf-fb-ghost { font-size: 12px; color: var(--fg-4); background: none; border: 0; padding: 7px 4px; cursor: pointer; }
+.kf-fb-ghost:hover { color: var(--fg-2); }
+.kf-fb-thanks { text-align: center; padding: 26px 18px 24px; }
+.kf-fb-check { width: 44px; height: 44px; border-radius: 50%; background: var(--accent-tint); display: grid; place-items: center; margin: 0 auto 12px; }
+.kf-fb-thx-t { font-size: 15px; font-weight: 650; color: var(--fg); }
+.kf-fb-thx-s { font-size: 12.5px; color: var(--fg-3); margin-top: 4px; max-width: 26ch; margin-inline: auto; line-height: 1.45; }
+@media (max-width: 480px) {
+  .kf-fb { left: 14px; right: 14px; bottom: 14px; width: auto; }
+}
+@media (prefers-reduced-motion: reduce) { .kf-fb { animation: none; } }
+
 /* Header invite button */
 .pub-invite { display: inline-flex; align-items: center; gap: 6px; }

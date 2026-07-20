@@ -90,6 +90,10 @@ export const api = {
       body: JSON.stringify({ answer_text: answerText }),
     }),
 
+  // ---- feedback (once, after answers are drafted) ----
+  submitFeedback: (input: { rating: number; comment?: string; email?: string; deal_id?: string | null }) =>
+    apiJson<{ ok: true }>("/api/feedback", { method: "POST", body: JSON.stringify(input) }),
+
   // ---- share / invite one collaborator ----
   createInvite: () => apiJson<{ token: string; expires_at: string }>("/api/auth/invite", { method: "POST" }),
   acceptInvite: (token: string) =>

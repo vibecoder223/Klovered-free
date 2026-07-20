@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "./PublicShell";
 import AuthButton from "./AuthButton";
+import FeedbackCard, { feedbackAlreadyGiven } from "./FeedbackCard";
 import { api } from "@/lib/api";
 
 type Q = {
@@ -48,6 +49,13 @@ export default function AnswersList() {
   const [savingIds, setSavingIds] = useState<Record<string, boolean>>({});
   const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
   const [rowErr, setRowErr] = useState<Record<string, string>>({});
+
+  // Feedback: a one-time card shown a beat after the visitor has actually seen
+  // their answers — post-value, never on the still-processing screen. Fires on
+  // whichever comes first: ~14s on the page or the first scroll (a real
+  // engagement signal). armedRef makes it fire at most once per mount.
+  const [showFeedback, setShowFeedback] = useState(false);
+  const feedbackArmedRef = useRef(false);
 
   // Share: the single-use invite link, shown in a popup once minted.
   const [inviteLink, setInviteLink] = useState<string | null>(null);
@@ -130,6 +138,27 @@ export default function AnswersList() {
       .then((d: { questions?: Q[] }) => setQs(d.questions ?? []))
       .catch(() => setQs([]));
   }, [ready, dealId]);
+
+  // Arm the one-time feedback trigger once answers are actually on screen.
+  // Fires on the first of: a ~14s dwell, or the first scroll (engagement).
+  useEffect(() => {
+    if (feedbackArmedRef.current) return;
+    if (!qs || qs.length === 0 || feedbackAlreadyGiven()) return;
+    feedbackArmedRef.current = true;
+
+    const fire = () => {
+      window.removeEventListener("scroll", fire);
+      clearTimeout(timer);
+      // Re-check the guard: a submit/dismiss in another tab may have set it.
+      if (!feedbackAlreadyGiven()) setShowFeedback(true);
+    };
+    const timer = setTimeout(fire, 14000);
+    window.addEventListener("scroll", fire, { passive: true, once: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("scroll", fire);
+    };
+  }, [qs]);
 
   // Client-side export: build a real Word (.docx) document from the loaded
   // answers and download it — no server round-trip. Unanswered/gap questions are
@@ -447,6 +476,15 @@ export default function AnswersList() {
           </span>
           <AuthButton />
         </div>
+      )}
+
+      {showFeedback && (
+        <FeedbackCard
+          dealId={dealId}
+          answeredCount={counts.total}
+          canReply={isAnonymous}
+          onClose={() => setShowFeedback(false)}
+        />
       )}
     </div>
   );
