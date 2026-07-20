@@ -38,6 +38,7 @@ export default function AnswersList() {
   const [qs, setQs] = useState<Q[] | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportErr, setExportErr] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [query, setQuery] = useState("");
 
@@ -160,6 +161,23 @@ export default function AnswersList() {
     };
   }, [qs]);
 
+  // Close the export menu on Escape or a click anywhere outside it.
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest(".kf-export")) setExportOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setExportOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [exportOpen]);
+
   // Client-side export: build a real Word (.docx) document from the loaded
   // answers and download it — no server round-trip. Unanswered/gap questions are
   // left blank for the team to fill in; we don't stamp system notes ("gap: no
@@ -217,7 +235,33 @@ export default function AnswersList() {
         }
       });
 
-      const doc = new Document({ sections: [{ children }] });
+      // Aptos throughout (Office's modern default). Sizes are half-points:
+      // 22 = 11pt body, 26 = 13pt question heading, 40 = 20pt title.
+      const doc = new Document({
+        styles: {
+          default: { document: { run: { font: "Aptos", size: 22 } } },
+          paragraphStyles: [
+            {
+              id: "Title",
+              name: "Title",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { font: "Aptos", size: 40, bold: true, color: "0B3D24" },
+              paragraph: { spacing: { after: 240 } },
+            },
+            {
+              id: "Heading2",
+              name: "Heading 2",
+              basedOn: "Normal",
+              next: "Normal",
+              quickFormat: true,
+              run: { font: "Aptos", size: 26, bold: true, color: "12281C" },
+            },
+          ],
+        },
+        sections: [{ children }],
+      });
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -227,6 +271,86 @@ export default function AnswersList() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+    } catch {
+      setExportErr("Could not build the download. Please try again.");
+    }
+    setExporting(false);
+  }
+
+  // Client-side PDF export, same content model as the Word file. Helvetica is
+  // jsPDF's built-in sans (Aptos can't be embedded without shipping the font
+  // file); it reads as the same clean, neutral proposal type. Gaps are left
+  // blank, no system notes stamped into a document that ships to a client.
+  async function exportPdf() {
+    if (exporting || !qs || qs.length === 0) return;
+    setExporting(true);
+    setExportErr(null);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 56;
+      const maxW = pageW - margin * 2;
+      let y = margin;
+
+      const ink = [31, 41, 37] as const;
+      const gray = [107, 114, 128] as const;
+      const green = [11, 61, 36] as const;
+
+      const ensure = (h: number) => {
+        if (y + h > pageH - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+      const write = (
+        text: string,
+        opts: { size: number; style?: "normal" | "bold"; color?: readonly number[]; gap?: number },
+      ) => {
+        doc.setFont("helvetica", opts.style ?? "normal");
+        doc.setFontSize(opts.size);
+        const c = opts.color ?? ink;
+        doc.setTextColor(c[0], c[1], c[2]);
+        const lineH = opts.size * 1.4;
+        for (const line of doc.splitTextToSize(text, maxW)) {
+          ensure(lineH);
+          doc.text(line, margin, y);
+          y += lineH;
+        }
+        if (opts.gap) y += opts.gap;
+      };
+
+      write("Klovered — drafted answers", { size: 20, style: "bold", color: green, gap: 16 });
+
+      qs.forEach((q, i) => {
+        ensure(52);
+        write(`${i + 1}. ${q.question_text}`, { size: 12, style: "bold", gap: 4 });
+
+        const r = q.response;
+        const answer = (r?.answer_text ?? "").trim();
+        write(answer || " ", { size: 11, gap: 6 });
+
+        // Traceability line for grounded answers only — never for gaps.
+        if (r && r.gap_flag !== "no_source") {
+          const meta: string[] = [];
+          if (r.citations?.length) {
+            meta.push(
+              "Sources: " +
+                r.citations
+                  .map((c) => (c.filename ?? "source") + (c.page_start != null ? ` p.${c.page_start}` : ""))
+                  .join("; "),
+            );
+          }
+          if (r.confidence != null) meta.push(`Confidence: ${Math.round(r.confidence * 100)}%`);
+          if (meta.length) write(meta.join("   ·   "), { size: 9, color: gray, gap: 14 });
+          else y += 10;
+        } else {
+          y += 14;
+        }
+      });
+
+      doc.save("klovered-answers.pdf");
     } catch {
       setExportErr("Could not build the download. Please try again.");
     }
@@ -361,13 +485,38 @@ export default function AnswersList() {
             </button>
           )}
           {exportErr && <span style={{ fontSize: 12, color: "var(--err)" }}>{exportErr}</span>}
-          <button className="btn btn-primary" onClick={exportDocx} disabled={exporting}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M12 4v10M12 14l-4-4M12 14l4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M5 17v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-            {exporting ? "Preparing…" : "Download as Word"}
-          </button>
+          <span className="kf-export">
+            <button
+              className="btn btn-primary"
+              onClick={() => setExportOpen((o) => !o)}
+              disabled={exporting}
+              aria-haspopup="menu"
+              aria-expanded={exportOpen}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 4v10M12 14l-4-4M12 14l4-4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M5 17v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              {exporting ? "Preparing…" : "Export"}
+              {!exporting && (
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ marginLeft: 1 }}>
+                  <path d="M6 9l6 6 6-6" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </button>
+            {exportOpen && !exporting && (
+              <div className="kf-export-menu" role="menu">
+                <button className="kf-export-item" role="menuitem" onClick={() => { setExportOpen(false); exportDocx(); }}>
+                  <span className="kf-ic doc">DOCX</span>
+                  <span className="kf-et"><span className="t">Microsoft Word</span><span className="s">.docx · editable</span></span>
+                </button>
+                <button className="kf-export-item" role="menuitem" onClick={() => { setExportOpen(false); exportPdf(); }}>
+                  <span className="kf-ic pdf">PDF</span>
+                  <span className="kf-et"><span className="t">PDF document</span><span className="s">.pdf · ready to send</span></span>
+                </button>
+              </div>
+            )}
+          </span>
         </span>
       </div>
 
@@ -394,63 +543,69 @@ export default function AnswersList() {
             const conf = r?.confidence != null ? r.confidence.toFixed(2) : null;
             return (
               <div className="kf-qrow" key={q.id}>
+                {/* Question + status pill on one line; the number is an inline
+                    mono prefix so the answer field below spans the full width. */}
                 <div className="kf-qtop">
-                  <span className="kf-qn">{n}</span>
-                  <div className="kf-qbody">
-                    {/* Title and status share one line, so the status pill never
-                        steals width from the answer well below it — every answer
-                        box spans the full column, identical width row to row. */}
-                    <div className="kf-qhead-row">
-                      <div className="kf-qt">{q.question_text}</div>
-                      <span className={`kf-qstat kf-badge ${badge.tone}`}><span className="kf-d" />{badge.label}</span>
-                    </div>
-                    {r ? (
-                      <>
-                        <div className="kf-answer">
-                          <textarea
-                            className="kf-answer-box"
-                            value={drafts[r.id] ?? r.answer_text ?? ""}
-                            onChange={(e) => editText(r.id, e.target.value)}
-                            onBlur={() => commitEdit(q)}
-                            readOnly={!canEdit}
-                            rows={4}
-                            placeholder={b === "gaps" ? "Write this answer yourself…" : undefined}
-                          />
-                        </div>
-                        {b === "gaps" ? (
-                          <div className="kf-gap-note">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flex: "none", marginTop: 1 }} aria-hidden="true">
-                              <path d="M12 3L2.5 20h19L12 3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-                              <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                              <circle cx="12" cy="17.2" r="1" fill="currentColor" />
-                            </svg>
-                            <span>Gap: no source found. Add this to your knowledge base, or write the answer yourself above.</span>
-                          </div>
-                        ) : (
-                          <div className="kf-qmeta">
-                            {r.citations?.map((c, ci) => (
-                              <span className="kf-cite" key={c.chunk_id || ci}>
-                                {c.filename ?? "source"}
-                                {c.page_start != null && <span className="kf-pg">p. {c.page_start}</span>}
-                              </span>
-                            ))}
-                            {conf != null && <span className="kf-conf">confidence {conf}</span>}
-                          </div>
-                        )}
-                        {(savingIds[r.id] || savedIds[r.id] || rowErr[r.id]) && (
-                          <div
-                            className={`kf-answer-flag${rowErr[r.id] ? " err" : savedIds[r.id] ? " saved" : ""}`}
-                            role={rowErr[r.id] ? "alert" : undefined}
-                          >
-                            {rowErr[r.id] || (savedIds[r.id] ? "Saved ✓" : "Saving…")}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <p className="kf-qa dim">Draft pending.</p>
-                    )}
-                  </div>
+                  <div className="kf-qt"><span className="kf-qn">{String(n).padStart(2, "0")}</span>{q.question_text}</div>
+                  <span className={`kf-qstat kf-badge ${badge.tone}`}><span className="kf-d" />{badge.label}</span>
                 </div>
+                {r ? (
+                  <>
+                    <div className="kf-answer">
+                      <textarea
+                        className={`kf-answer-box${b === "gaps" ? " gap" : ""}`}
+                        value={drafts[r.id] ?? r.answer_text ?? ""}
+                        onChange={(e) => editText(r.id, e.target.value)}
+                        onBlur={() => commitEdit(q)}
+                        readOnly={!canEdit}
+                        rows={4}
+                        placeholder={b === "gaps" ? "Write this answer yourself…" : undefined}
+                      />
+                    </div>
+                    {b === "gaps" ? (
+                      <div className="kf-gap-note">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <path d="M12 3L2.5 20h19L12 3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                          <path d="M12 10v4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                          <circle cx="12" cy="17.2" r="1" fill="currentColor" />
+                        </svg>
+                        <span>No source found. Add a document to your knowledge base, or answer it above.</span>
+                      </div>
+                    ) : (
+                      <div className="kf-qmeta">
+                        {r.citations?.map((c, ci) => (
+                          <span className="kf-cite" key={c.chunk_id || ci}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                              <path d="M7 3h7l4 4v14H7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                              <path d="M14 3v4h4" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" />
+                            </svg>
+                            {c.filename ?? "source"}
+                            {c.page_start != null && <span className="kf-pg">p.{c.page_start}</span>}
+                          </span>
+                        ))}
+                        {r.confidence != null && (
+                          <span className={`kf-conf ${r.confidence >= LOW_CONF ? "hi" : "lo"}`}>
+                            confidence
+                            <span className="kf-conf-track">
+                              <span className="kf-conf-fill" style={{ width: `${Math.round(r.confidence * 100)}%` }} />
+                            </span>
+                            <span className="kf-conf-v">{conf}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {(savingIds[r.id] || savedIds[r.id] || rowErr[r.id]) && (
+                      <div
+                        className={`kf-answer-flag${rowErr[r.id] ? " err" : savedIds[r.id] ? " saved" : ""}`}
+                        role={rowErr[r.id] ? "alert" : undefined}
+                      >
+                        {rowErr[r.id] || (savedIds[r.id] ? "Saved ✓" : "Saving…")}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="kf-qa dim">Draft pending.</p>
+                )}
               </div>
             );
           })

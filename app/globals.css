@@ -1766,24 +1766,48 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 .kf-search input { border: 0; background: none; outline: none; font: inherit; color: var(--fg); flex: 1; min-width: 0; }
 .kf-chip { font-size: 12px; font-weight: 500; color: var(--fg-3); background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; cursor: pointer; transition: border-color 120ms var(--ease), color 120ms var(--ease), background 120ms var(--ease); }
 .kf-chip.on { color: var(--accent-3); border-color: var(--accent-line); background: var(--accent-tint); }
-.kf-qrow { border-bottom: 1px solid var(--divider); }
+/* Export split button + Word/PDF menu */
+.kf-export { position: relative; }
+.kf-export-menu { position: absolute; right: 0; top: calc(100% + 6px); width: 224px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow-3, var(--shadow-2)); padding: 6px; z-index: 20; }
+.kf-export-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 8px 9px; border: 0; background: none; border-radius: 7px; cursor: pointer; font: inherit; }
+.kf-export-item:hover { background: var(--bg-2); }
+.kf-ic { width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; flex: none; font-size: 9.5px; font-weight: 700; font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: 0.02em; }
+.kf-ic.doc { background: oklch(0.94 0.05 250); color: oklch(0.45 0.15 250); }
+.kf-ic.pdf { background: oklch(0.945 0.05 25); color: oklch(0.5 0.18 25); }
+.kf-et { display: flex; flex-direction: column; min-width: 0; }
+.kf-et .t { font-size: 13px; font-weight: 550; color: var(--fg); }
+.kf-et .s { font-size: 11px; color: var(--fg-4); margin-top: 1px; font-variant-numeric: tabular-nums; }
+/* One container, rows split by a hairline; the whole row gets the padding so
+   the answer field and its meta span the full width, flush under the number. */
+.kf-qrow { border-bottom: 1px solid var(--divider); padding: 18px 20px; }
 .kf-qrow:last-child { border-bottom: 0; }
-.kf-qtop { display: flex; align-items: flex-start; gap: 12px; padding: 13px 16px; }
-.kf-qn { font-size: 12px; color: var(--fg-4); font-variant-numeric: tabular-nums; padding-top: 1px; width: 26px; flex: none; }
-.kf-qbody { min-width: 0; flex: 1; }
-/* Title + status pill on one line. The pill is flex:none, the title takes the
-   rest — so the answer well below always spans the full body width, giving
-   every answer box an identical width regardless of the pill's label length. */
-.kf-qhead-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.kf-qt { font-size: 13.5px; font-weight: 600; line-height: 1.45; color: var(--fg); flex: 1; min-width: 0; }
+/* Question + status pill on one line. Pill is flex:none; the title takes the
+   rest. Number is an inline mono prefix, not a separate gutter column. */
+.kf-qtop { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.kf-qt { font-size: 15px; font-weight: 600; line-height: 1.42; letter-spacing: -0.01em; color: var(--fg); flex: 1; min-width: 0; }
+.kf-qn { color: var(--fg-4); margin-right: 9px; font-size: 12px; font-variant-numeric: tabular-nums; font-family: 'Geist Mono', ui-monospace, monospace; }
 .kf-qa { font-size: 13px; color: var(--fg-2); margin-top: 7px; line-height: 1.55; max-width: 66ch; white-space: pre-wrap; }
 .kf-qa.dim { color: var(--fg-4); }
-.kf-qmeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-.kf-cite { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: var(--accent-3); background: var(--accent-tint); border-radius: 5px; padding: 3px 9px; }
-.kf-cite .kf-pg { color: var(--accent-2); font-variant-numeric: tabular-nums; }
-.kf-conf { font-size: 11.5px; color: var(--fg-4); font-variant-numeric: tabular-nums; }
-.kf-qstat { flex: none; padding-top: 1px; }
-.kf-gap-note { display: flex; gap: 9px; align-items: flex-start; background: var(--warn-tint); border: 1px solid oklch(0.88 0.06 70); border-radius: 6px; padding: 9px 12px; margin-top: 9px; font-size: 12.5px; color: oklch(0.42 0.1 62); }
+.kf-qmeta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 11px; }
+.kf-cite { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 500; color: var(--accent-3); background: var(--accent-tint); border-radius: 6px; padding: 4px 9px 4px 8px; }
+.kf-cite svg { color: var(--accent-2); flex: none; }
+.kf-cite .kf-pg { color: var(--accent-2); font-variant-numeric: tabular-nums; font-size: 10.5px; }
+/* Confidence as a small meter + mono value; green when high, gray when low. */
+.kf-conf { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font-size: 11px; color: var(--fg-4); }
+.kf-conf-track { width: 60px; height: 5px; border-radius: 999px; background: var(--bg-2); overflow: hidden; box-shadow: inset 0 0 0 1px var(--divider); }
+.kf-conf-fill { height: 100%; border-radius: 999px; }
+.kf-conf-v { font-variant-numeric: tabular-nums; font-weight: 500; }
+.kf-conf.hi .kf-conf-fill { background: var(--accent); } .kf-conf.hi .kf-conf-v { color: var(--accent-3); }
+.kf-conf.lo .kf-conf-fill { background: var(--fg-4); } .kf-conf.lo .kf-conf-v { color: var(--fg-3); }
+/* Status pill — filled tint. Tone colors (text + dot) come from .kf-badge. */
+.kf-qstat { flex: none; margin-top: 1px; padding: 4px 10px 4px 8px; border-radius: 999px; }
+.kf-qstat.ok  { background: var(--accent-tint); }
+.kf-qstat.dim { background: var(--bg-2); }
+.kf-qstat.warn { background: var(--warn-tint); color: oklch(0.5 0.11 60); }
+/* Gap: amber note, inline, no box (the amber lives on the pill + note, never
+   on the answer field). */
+.kf-gap-note { display: inline-flex; gap: 7px; align-items: center; margin-top: 11px; font-size: 11.5px; color: oklch(0.5 0.11 60); }
+.kf-gap-note svg { color: var(--warn); flex: none; }
 .kf-keepstrip { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: var(--accent-tint); border: 1px solid var(--accent-tint2); border-radius: 8px; padding: 12px 16px; margin-top: 20px; }
 .kf-keepstrip .kf-t { font-size: 13px; color: var(--accent-3); }
 .kf-keepstrip .kf-t b { font-weight: 650; }
@@ -2022,16 +2046,18 @@ h3 { font-size: 13px; line-height: 1.35; font-weight: 600; letter-spacing: -0.00
 /* Answer box — always a live textbox under each question, no separate "edit
    mode" to click into. Saves on blur. Recessed fill (like .textarea) so it
    reads as an editable well inside the row, not a bordered card-on-a-card. */
-.kf-answer { margin-top: 8px; }
+.kf-answer { margin-top: 12px; }
 .kf-answer-box {
-  width: 100%; resize: vertical; min-height: 84px;
-  padding: 9px 11px; border: 1px solid var(--border); border-radius: var(--r-md);
-  background: var(--bg-2); color: var(--fg); font: inherit; font-size: 13px; line-height: 1.6;
-  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+  width: 100%; resize: vertical; min-height: 96px;
+  padding: 12px 14px 14px; border: 1px solid var(--border); border-radius: var(--r-md);
+  background: var(--bg); color: var(--fg); font: inherit; font-size: 13.5px; line-height: 1.62;
+  transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
 }
 .kf-answer-box::placeholder { color: var(--fg-5); }
 .kf-answer-box:hover { border-color: var(--border-strong); }
-.kf-answer-box:focus { outline: none; border-color: var(--accent); background: var(--surface); }
+.kf-answer-box:focus { outline: none; border-color: var(--accent-line); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-glow); }
+/* Gap fields are dashed to read as "nothing here yet" without any amber fill. */
+.kf-answer-box.gap { border-style: dashed; }
 .kf-answer-box[readonly] { background: var(--bg); color: var(--fg-2); cursor: default; }
 .kf-answer-flag { margin-top: 6px; font-size: 11px; color: var(--fg-4); }
 .kf-answer-flag.saved { color: var(--accent-3); font-weight: 600; }
