@@ -36,6 +36,7 @@ export default function RfpUpload() {
   const [rfpFile, setRfpFile] = useState<{ name: string; size: number } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [daily, setDaily] = useState<{ used: number; cap: number } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Show remaining RFP quota for the day (advisory; the backend enforces it).
   useEffect(() => {
@@ -51,20 +52,27 @@ export default function RfpUpload() {
     };
   }, []);
 
-  // Resume: if this session already has a processed RFP, jump to answers.
+  // Resume: if this session already has an RFP (any state — processing, done,
+  // or failed), show it instead of the empty dropzone. This used to silently
+  // router.push("/answers") the moment questions existed, which meant clicking
+  // "Upload RFP" in the step nav from the Answers screen just bounced straight
+  // back with no way to see this step's UI, delete the RFP, or upload a new one.
   useEffect(() => {
     if (!dealId) return;
     let cancelled = false;
     api
       .dealAnswers(dealId)
-      .then(({ questions }: { questions?: unknown[] }) => {
-        if (!cancelled && questions?.length) router.push("/answers");
+      .then(({ documents }: { documents?: { id: string; filename: string; processing_status: string; error_message?: string | null }[] }) => {
+        if (cancelled || !documents?.length) return;
+        const d = documents[0];
+        setDoc({ id: d.id, status: d.processing_status, error: d.error_message });
+        setRfpFile({ name: d.filename, size: 0 });
       })
       .catch(() => {});
     return () => {
       cancelled = true;
     };
-  }, [dealId, router]);
+  }, [dealId]);
 
   // Poll processing status until a terminal state, then advance to answers.
   useEffect(() => {
@@ -127,16 +135,38 @@ export default function RfpUpload() {
   );
 
   const failed = !!doc && isFailed(doc.status);
+  const completed = doc?.status === "completed";
   const processing = !!doc && !failed;
   const idx = doc ? phaseIndex(doc.status) : 0;
   const pct = Math.max(6, Math.round((idx / (PHASES.length - 1)) * 100));
 
+  // The backend allows exactly one RFP per deal — to upload a different one,
+  // the current document must be deleted first. Used by both the completed
+  // and failed states, the two places a replacement makes sense.
+  async function deleteAndRestart() {
+    if (!doc || deleting) return;
+    setDeleting(true);
+    try {
+      await api.documentDelete(doc.id);
+    } catch {
+      // Even if the delete call fails, resetting lets the visitor retry the
+      // upload; a stale document row just means the backend still enforces
+      // the one-RFP cap and the next upload attempt surfaces that clearly.
+    }
+    setDoc(null);
+    setRfpFile(null);
+    setErr(null);
+    setDeleting(false);
+  }
+
   return (
     <div className="kf-page">
       <div className="kf-head">
-        <h1>{processing ? "Reading your RFP" : "Upload your RFP"}</h1>
+        <h1>{completed ? "Your RFP is processed" : processing ? "Reading your RFP" : "Upload your RFP"}</h1>
         <p>
-          {processing
+          {completed
+            ? "Every requirement has been extracted and drafted. Continue to review the answers, or replace this RFP to start over."
+            : processing
             ? "Every requirement is being extracted and structured, including the ones buried in appendices. This usually takes a couple of minutes."
             : "Upload the questionnaire you need answered. Klovered extracts each requirement and drafts a grounded response from your knowledge."}
         </p>
@@ -194,16 +224,19 @@ export default function RfpUpload() {
         </>
       )}
 
-      {/* Processing: file + meter + phase list */}
+      {/* Processing or completed: file + meter + phase list */}
       {processing && (
         <div className="kf-card">
           <div className="kf-rfp-file">
             <span className="kf-fic"><FileIcon color="var(--accent-3)" /></span>
             <div className="kf-fn" style={{ flex: 1, minWidth: 0 }}>
               <div className="kf-nm">{rfpFile?.name ?? "Your RFP"}</div>
-              {rfpFile && <div className="kf-meta">{formatSize(rfpFile.size)}</div>}
+              {!!rfpFile?.size && <div className="kf-meta">{formatSize(rfpFile.size)}</div>}
             </div>
-            <span className="kf-badge warn"><span className="kf-d" />Extracting</span>
+            <span className={`kf-badge ${completed ? "ok" : "warn"}`}>
+              <span className="kf-d" />
+              {completed ? "Processed" : "Extracting"}
+            </span>
           </div>
           <div className="kf-meter" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Extraction progress">
             <div className="kf-fill" style={{ width: `${pct}%` }} />
@@ -228,6 +261,13 @@ export default function RfpUpload() {
       {/* Failed */}
       {failed && (
         <div className="kf-card">
+          <div className="kf-rfp-file">
+            <span className="kf-fic"><FileIcon color="var(--err)" /></span>
+            <div className="kf-fn" style={{ flex: 1, minWidth: 0 }}>
+              <div className="kf-nm">{rfpFile?.name ?? "Your RFP"}</div>
+            </div>
+            <span className="kf-badge err"><span className="kf-d" />Failed</span>
+          </div>
           <div className="kf-gap-note" role="alert" style={{ margin: 16, marginTop: 16 }}>
             <WarnIcon />
             <span>{doc?.error || "The RFP could not be processed. Please try a different file."}</span>
@@ -236,10 +276,29 @@ export default function RfpUpload() {
       )}
 
       {/* Footer */}
+      {failed && (
+        <div className="kf-foot">
+          <button className="btn btn-ghost" onClick={deleteAndRestart} disabled={deleting}>
+            {deleting ? "Removing…" : "Try a different file"}
+          </button>
+        </div>
+      )}
       {processing && (
         <div className="kf-foot">
-          <span className="kf-hint">Safe to leave this tab open in the background. We will keep going.</span>
-          <button className="btn btn-primary btn-lg" disabled>Continue to answers</button>
+          {completed ? (
+            <button className="btn btn-ghost" onClick={deleteAndRestart} disabled={deleting}>
+              {deleting ? "Removing…" : "Upload a different RFP"}
+            </button>
+          ) : (
+            <span className="kf-hint">Safe to leave this tab open in the background. We will keep going.</span>
+          )}
+          <button
+            className="btn btn-primary btn-lg"
+            disabled={!completed}
+            onClick={() => completed && router.push("/answers")}
+          >
+            Continue to answers
+          </button>
         </div>
       )}
     </div>

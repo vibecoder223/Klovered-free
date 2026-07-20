@@ -55,9 +55,21 @@ export default function OnboardingOverlay() {
     // browser-only API, and reading it during render would break SSR hydration.
     // The setState fires at most once, on first visit, so the cascading-render
     // caution doesn't apply here.
+    //
+    // Skip when a ?auth=signin|signup deep link is present (the marketing
+    // site's CTAs land here that way — see AuthButton) — that's the visitor
+    // explicitly asking to sign up, and AuthButton opens its own full-screen
+    // modal for it on the same mount. Both overlays used to auto-open
+    // together, racing at the same z-index, which read as a broken double
+    // popup on the very first screen a new visitor saw. This is a one-time
+    // skip, not a dismissal: SEEN_KEY is left unset, so the intro still shows
+    // on a later, uncontested page load.
     try {
+      const params = new URLSearchParams(window.location.search);
+      const auth = params.get("auth");
+      const viaAuthDeepLink = auth === "signin" || auth === "signup";
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (!localStorage.getItem(SEEN_KEY)) setOpen(true);
+      if (!viaAuthDeepLink && !localStorage.getItem(SEEN_KEY)) setOpen(true);
     } catch {
       // localStorage blocked (private mode / embedded) — just don't show it.
     }

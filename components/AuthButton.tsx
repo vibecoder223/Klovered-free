@@ -22,38 +22,48 @@ export default function AuthButton() {
   const [signingOut, setSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Deep-link support: the marketing site's "Sign in" / "Start free trial"
-  // CTAs point here with ?auth=signin / ?auth=signup so a visitor lands
-  // straight in the right tab of the modal instead of on a bare tool screen.
-  // The param is stripped right after so back/reload doesn't reopen it.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const auth = params.get("auth");
-    if (auth === "signin" || auth === "signup") {
-      setModalMode(auth);
-      setModalOpen(true);
-      params.delete("auth");
-      const rest = params.toString();
-      window.history.replaceState(
-        null,
-        "",
-        window.location.pathname + (rest ? `?${rest}` : "")
-      );
-    }
-  }, []);
-
+  // Auth check + deep-link support in one effect. The marketing site's
+  // "Sign in" / "Start free trial" CTAs point here with ?auth=signin /
+  // ?auth=signup so a visitor lands straight in the right tab of the modal.
+  // That deep-link used to be its OWN effect, firing on mount before this
+  // one's api.me() resolved — it always opened the modal assuming the visitor
+  // was anonymous (the default state), then the instant api.me() came back
+  // signed-in, this component re-rendered into the account-avatar branch
+  // (which never renders <AuthModal/>), and the modal vanished. Net effect: an
+  // already-signed-in visitor saw the sign-up modal flash open and disappear.
+  // Gating on the real result fixes it — the modal only opens once we KNOW
+  // the visitor is anonymous; a signed-in visitor never sees it at all.
   useEffect(() => {
     let cancelled = false;
+
+    function applyAuthDeepLink(isAnon: boolean) {
+      const params = new URLSearchParams(window.location.search);
+      const auth = params.get("auth");
+      if (auth !== "signin" && auth !== "signup") return;
+      if (isAnon) {
+        setModalMode(auth);
+        setModalOpen(true);
+      }
+      // Strip either way so back/reload doesn't retrigger it, and a signed-in
+      // visitor doesn't keep ?auth=signup sitting in their URL.
+      params.delete("auth");
+      const rest = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : ""));
+    }
+
     api
       .me()
       .then((s) => {
         if (cancelled) return;
         setEmail(s.email ?? null);
         setAnon(s.is_anonymous);
+        applyAuthDeepLink(s.is_anonymous);
       })
       .catch(() => {
         // No session yet (bootstrap in flight) — treat as anonymous.
-        if (!cancelled) setAnon(true);
+        if (cancelled) return;
+        setAnon(true);
+        applyAuthDeepLink(true);
       });
     return () => {
       cancelled = true;
